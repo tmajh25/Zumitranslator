@@ -12,8 +12,8 @@ class R18Detector {
   // Explicit rating tags in chapter titles
   static TITLE_RATING_PATTERNS = {
     universal: [
-      /[\[(【（]\s*(?:18\+|19\+|r-?18|r-?19|smut|nsfw)\s*[\])】）]/i,
-      /(?:^|[^\p{L}\p{N}])(?:r-?18|r-?19)(?:$|[^\p{L}\p{N}])/iu
+      /[\[(【（]\s*(?:18\+|19\+|r-?18|r-?19|smut|nsfw|19금|18금|18禁|19禁|고수위|高h|肉文|cao\s*h|h\s*văn)\s*[\])】）]/i,
+      /(?:^|[^\p{L}\p{N}])(?:18\+|19\+|r-?18|r-?19)(?:$|[^\p{L}\p{N}])/iu
     ],
     ko: [
       /[\[(【（]\s*(?:19금|18금|고수위)\s*[\])】）]/i,
@@ -130,11 +130,12 @@ class R18Detector {
     const han = count(/[\u4E00-\u9FFF]/g);
     const viet = count(/[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/gi);
     const latin = count(/[a-z]/gi);
-    if (hangul > 20 && hangul >= kana && hangul >= han) return 'ko';
-    if (kana > 20) return 'ja';
-    if (han > 20) return 'zh';
-    if (viet > 20) return 'vi';
-    if (latin > 100) return 'en';
+    const threshold = sample.length < 50 ? 0 : 5;
+    if (hangul > threshold && hangul >= kana && hangul >= han) return 'ko';
+    if (kana > threshold) return 'ja';
+    if (han > threshold) return 'zh';
+    if (viet > threshold) return 'vi';
+    if (latin > (sample.length < 50 ? 5 : 50)) return 'en';
     return '';
   }
 
@@ -181,7 +182,8 @@ class R18Detector {
    */
   static isChapterR18(ch, fc, sourceLang = 'auto') {
     if (!ch) return false;
-    const langs = R18Detector.resolveExplicitLangs(sourceLang, ch.content || ch.title || '');
+    const sampleForLang = `${ch.title || ''} ${ch.content || ''}`;
+    const langs = R18Detector.resolveExplicitLangs(sourceLang, sampleForLang);
 
     // Check title
     const title = `${ch.title || ''} ${(fc && fc.title) ? fc.title : ''}`;
@@ -227,6 +229,12 @@ class R18Detector {
     }
 
     const langs = R18Detector.resolveExplicitLangs(sourceLang, text);
+    
+    // Check if text/title matches explicit rating tags
+    if (R18Detector.isTitleR18(text, langs)) {
+      return { isR18: true, matchCount: 1, totalScore: 100, reason: 'title_rating' };
+    }
+
     // If language cannot be determined, do not inspect and do not trigger
     if (langs.length === 0) {
       return { isR18: false, matchCount: 0, totalScore: 0, reason: 'no_explicit_lang' };
