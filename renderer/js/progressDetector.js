@@ -110,7 +110,8 @@ const ProgressDetector = {
     const normTarget = (targetLang || 'vi').toLowerCase().split('-')[0];
 
     // Non-Latin Asian & Cyrillic scripts (evaluated on real text to detect all languages in the story)
-    const jpCount = (clean.match(/[\u3040-\u30ff]/g) || []).length;
+    // Only match genuine Kana characters (Hiragana & Katakana), excluding middle dots (\u30fb) and sound marks (\u3099-\u309c) which appear in Chinese/kaomoji
+    const jpCount = (clean.match(/[\u3041-\u3096\u30a1-\u30fa]/g) || []).length;
     const krCount = (clean.match(/[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\ud7b0-\ud7ff]/g) || []).length;
     const ruCount = (clean.match(/[\u0400-\u04ff]/g) || []).length;
     const thCount = (clean.match(/[\u0e00-\u0e7f]/g) || []).length;
@@ -151,8 +152,23 @@ const ProgressDetector = {
 
     // Weight: 1 Asian character has higher semantic density than 1 Latin letter (~3x)
     const krEffective = krCount * 3.0;
-    const zhEffective = (jpCount === 0 ? cjkCount : 0) * 3.0;
-    const jpEffective = (jpCount + (jpCount > 0 ? cjkCount : 0)) * 3.0;
+
+    // Differentiate Chinese vs Japanese when CJK and Kana co-exist:
+    // In genuine Japanese, Kana accounts for at least 8%-15% of all CJK/Kana characters.
+    // In Chinese with rare loanwords/kaomoji/punctuation, Kana is negligible (< 8%) and CJK dominates.
+    const totalAsian = cjkCount + jpCount;
+    const isGenuineJapanese = jpCount >= 4 && (cjkCount === 0 || (jpCount / totalAsian) >= 0.08);
+
+    let zhEffective = 0;
+    let jpEffective = 0;
+
+    if (isGenuineJapanese) {
+      jpEffective = (jpCount + cjkCount) * 3.0;
+      zhEffective = 0;
+    } else {
+      zhEffective = cjkCount * 3.0;
+      jpEffective = jpCount * 3.0;
+    }
     const ruEffective = ruCount;
     const thEffective = thCount * 2;
 
@@ -269,7 +285,8 @@ const ProgressDetector = {
     const masked = this.maskTranslatorNotes(clean);
 
     // 1. Calculate Asian/Cyrillic script counts
-    const jpCount = (masked.match(/[\u3040-\u30ff]/g) || []).length;
+    // Only match genuine Kana characters (Hiragana & Katakana), excluding middle dots (\u30fb) and sound marks (\u3099-\u309c)
+    const jpCount = (masked.match(/[\u3041-\u3096\u30a1-\u30fa]/g) || []).length;
     const krCount = (masked.match(/[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\ud7b0-\ud7ff]/g) || []).length;
     const ruCount = (masked.match(/[\u0400-\u04ff]/g) || []).length;
     const thCount = (masked.match(/[\u0e00-\u0e7f]/g) || []).length;
@@ -283,7 +300,7 @@ const ProgressDetector = {
     const viUnaccented = (masked.match(/\b(chuong|tap|phan|hoi|quyen|ngoai truyen|loi bat|muc luc|tac gia|dich gia|thien|nien|hoa)\b/gi) || []).length;
 
     // If text has significant Vietnamese content outnumbering residual Asian characters, it is Vietnamese
-    const foreignAsianCount = jpCount + krCount + (jpCount === 0 ? cjkCount : 0);
+    const foreignAsianCount = jpCount + krCount + cjkCount;
     if (viScore >= 6 && viScore > foreignAsianCount * 2) {
       return 'vi';
     }
@@ -292,11 +309,15 @@ const ProgressDetector = {
     }
 
     // 3. Dominant script checks for foreign source texts
-    if (jpCount >= 2 && jpCount > viScore) return 'ja';
-    if (krCount >= 2 && krCount > viScore) return 'ko';
+    if (krCount >= 2 && krCount > viScore && (cjkCount === 0 || krCount >= cjkCount)) return 'ko';
     if (ruCount >= 5) return 'ru';
     if (thCount >= 5) return 'th';
-    if (cjkCount >= 2 && jpCount === 0 && cjkCount > viScore) return 'zh';
+
+    const totalAsian = cjkCount + jpCount;
+    const isGenuineJapanese = jpCount >= 4 && (cjkCount === 0 || (jpCount / totalAsian) >= 0.08);
+
+    if (isGenuineJapanese && jpCount > viScore) return 'ja';
+    if (cjkCount >= 2 && cjkCount > viScore) return 'zh';
 
     // 4. Weighted scoring for Latin-script languages
     const scores = { vi: viScore, fr: 0, de: 0, es: 0, en: 0 };

@@ -126,13 +126,14 @@ class R18Detector {
     const sample = text.length > 5000 ? text.slice(0, 5000) : text;
     const count = re => (sample.match(re) || []).length;
     const hangul = count(/[\uAC00-\uD7AF]/g);
-    const kana = count(/[\u3040-\u30FF]/g);
+    const kana = count(/[\u3041-\u3096\u30a1-\u30fa]/g);
     const han = count(/[\u4E00-\u9FFF]/g);
     const viet = count(/[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/gi);
     const latin = count(/[a-z]/gi);
     const threshold = sample.length < 50 ? 0 : 5;
     if (hangul > threshold && hangul >= kana && hangul >= han) return 'ko';
-    if (kana > threshold) return 'ja';
+    const totalAsian = han + kana;
+    if (kana > threshold && (han === 0 || (kana / totalAsian) >= 0.08)) return 'ja';
     if (han > threshold) return 'zh';
     if (viet > threshold) return 'vi';
     if (latin > (sample.length < 50 ? 5 : 50)) return 'en';

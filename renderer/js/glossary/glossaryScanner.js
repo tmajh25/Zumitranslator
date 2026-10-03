@@ -72,14 +72,23 @@ const GlossaryScanner = {
     }
 
     // Determine language of the novel
-    let bookLang = (book && book.language) || s.sourceLang || 'auto';
-    if (bookLang === 'auto' || !bookLang) {
-      const hasKana = /[\u3040-\u30ff]/.test(combinedText);
-      const hasHangul = /[\uac00-\ud7af]/.test(combinedText);
-      const hasChinese = /[\u4e00-\u9fa5]/.test(combinedText);
-      if (hasKana) bookLang = 'ja';
-      else if (hasHangul) bookLang = 'ko';
-      else if (hasChinese) bookLang = 'zh';
+    let bookLang = (book && book.language && book.language !== 'vi') ? book.language : (s.sourceLang || 'auto');
+    if (window.ProgressDetector && typeof window.ProgressDetector.detectLanguageOffline === 'function') {
+      const detected = ProgressDetector.detectLanguageOffline(combinedText);
+      if (detected && detected !== 'unknown' && detected !== 'empty' && detected !== 'vi') {
+        bookLang = detected;
+      }
+    }
+    if (bookLang === 'auto' || !bookLang || bookLang === 'vi') {
+      const kanaCount = (combinedText.match(/[\u3041-\u3096\u30a1-\u30fa]/g) || []).length;
+      const hangulCount = (combinedText.match(/[\uac00-\ud7af]/g) || []).length;
+      const cjkCount = (combinedText.match(/[\u4e00-\u9fa5]/g) || []).length;
+      const totalAsian = cjkCount + kanaCount;
+      const isJp = kanaCount >= 4 && (cjkCount === 0 || (kanaCount / totalAsian) >= 0.08);
+
+      if (isJp) bookLang = 'ja';
+      else if (hangulCount >= 3 && hangulCount >= cjkCount) bookLang = 'ko';
+      else if (cjkCount >= 3) bookLang = 'zh';
       else bookLang = 'en';
     }
 
