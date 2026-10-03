@@ -1,0 +1,180 @@
+      <div id="viewChapterModal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="modalTitle">Tiêu đề chương</h3>
+            <button class="icon-btn" id="closeModal">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body" id="modalBody">
+            <!-- Content will be injected here -->
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="viewSourceBtn">Xem gốc</button>
+            <button class="btn btn-secondary" id="copyChapterBtn">Sao chép</button>
+            <button class="btn btn-primary" id="closeModalBtn">Đóng</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Modal -->
+      <div id="exportModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 450px;">
+          <div class="modal-header">
+            <h3>Xuất bản dịch</h3>
+            <button class="icon-btn" id="closeExportModal">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="setting-card" style="margin-bottom: 0; box-shadow: none; border: none; padding: 0;">
+              <p class="panel-subtitle" style="margin-bottom: 16px;">Chọn định dạng bạn muốn xuất:</p>
+              
+              <div class="export-options-grid">
+                <label class="provider-card export-option" data-format="epub">
+                  <input type="radio" name="exportFormat" value="epub" checked>
+                  <div class="provider-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>
+                  </div>
+                  <span class="provider-name">File EPUB</span>
+                  <span class="provider-badge">Sách điện tử</span>
+                </label>
+
+                <label class="provider-card export-option" data-format="txt-single">
+                  <input type="radio" name="exportFormat" value="txt-single">
+                  <div class="provider-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <span class="provider-name">1 File TXT</span>
+                  <span class="provider-badge">Tất cả chương</span>
+                </label>
+
+                <label class="provider-card export-option" data-format="txt-multi">
+                  <input type="radio" name="exportFormat" value="txt-multi">
+                  <div class="provider-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <span class="provider-name">Nhiều TXT</span>
+                  <span class="provider-badge">Mỗi chương 1 file</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelExportBtn">Hủy</button>
+            <button class="btn btn-primary" id="confirmExportBtn">Xác nhận Xuất</button>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="bulkReplaceModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px;">
+          <div class="modal-header">
+            <h3>Thay thế hàng loạt</h3>
+            <button class="icon-btn" id="closeReplaceModal">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="setting-card" style="margin-bottom: 0; box-shadow: none; border: none; padding: 0;">
+              <p class="panel-subtitle" style="margin-bottom: 16px;">Thay thế văn bản trong các chương đã dịch hoặc chương gốc.</p>
+              
+              <div class="input-group-vertical" style="margin-bottom: 12px;">
+                <label class="setting-label-small">Tìm kiếm</label>
+                <input type="text" id="findInput" class="setting-input" placeholder="Từ/cụm từ cần tìm...">
+              </div>
+              
+              <div class="input-group-vertical" style="margin-bottom: 20px;">
+                <label class="setting-label-small">Thay thế bằng</label>
+                <input type="text" id="replaceInput" class="setting-input" placeholder="Từ/cụm từ thay thế...">
+              </div>
+
+              <div class="input-group-vertical" style="margin-bottom: 20px;">
+                <label class="setting-label-small">Phạm vi thay thế</label>
+                <select id="replaceScope" class="setting-input">
+                  <option value="finished" selected>Chương đã dịch (Finished)</option>
+                  <option value="source">Nội dung gốc (Source)</option>
+                  <option value="both">Cả hai</option>
+                </select>
+              </div>
+
+              <div class="setting-item-row">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="replaceCaseSensitive">
+                  <label for="replaceCaseSensitive">Phân biệt hoa thường</label>
+                </div>
+              </div>
+              
+              <div class="setting-item-row" style="margin-top: 8px;">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="replaceUseRegex">
+                  <label for="replaceUseRegex">Sử dụng Biểu thức chính quy (Regex)</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelReplaceBtn">Hủy</button>
+            <button class="btn btn-primary" id="confirmReplaceBtn">Thực hiện thay thế</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EPUB Optimize Modal (Customizable) -->
+      <div id="epubOptimizeModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 480px;">
+          <div class="modal-header">
+            <h3>⚡ Tùy chọn Tối ưu hóa EPUB</h3>
+            <button class="icon-btn" id="closeEpubOptimizeModal">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="panel-subtitle" style="margin-bottom: 14px; font-size: 13px;">Chọn các tùy chọn bạn muốn tối ưu cho tệp sách này:</p>
+            <div class="setting-card" style="box-shadow: none; border: 1px solid var(--border-color); padding: 12px 14px; border-radius: 8px; margin-bottom: 0;">
+              <div class="setting-item-row" style="margin-bottom: 14px; align-items: flex-start;">
+                <div class="checkbox-wrapper" style="align-items: flex-start; gap: 8px;">
+                  <input type="checkbox" id="optPurgeOrphans" checked style="margin-top: 3px;">
+                  <label for="optPurgeOrphans" style="cursor: pointer; line-height: 1.4;">
+                    <span style="font-weight: 600;">Xóa ảnh rác & ảnh mồ côi</span>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Quét và xóa các ảnh không dùng trong bất kỳ chương nào, giải phóng dung lượng.</div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="setting-item-row" style="margin-bottom: 14px; align-items: flex-start;">
+                <div class="checkbox-wrapper" style="align-items: flex-start; gap: 8px;">
+                  <input type="checkbox" id="optCleanHtml" checked style="margin-top: 3px;">
+                  <label for="optCleanHtml" style="cursor: pointer; line-height: 1.4;">
+                    <span style="font-weight: 600;">Dọn rác HTML & thẻ trống</span>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Gỡ bỏ các thẻ script rác và các đoạn văn trống &lt;p&gt;&lt;/p&gt; gây loãng trang sách.</div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="setting-item-row" style="align-items: flex-start;">
+                <div class="checkbox-wrapper" style="align-items: flex-start; gap: 8px;">
+                  <input type="checkbox" id="optRecompress" checked style="margin-top: 3px;">
+                  <label for="optRecompress" style="cursor: pointer; line-height: 1.4;">
+                    <span style="font-weight: 600;">Tái nén DEFLATE Level 9</span>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Nén tối đa tệp ZIP và chuẩn hóa mimetype chuẩn xuất bản quốc tế.</div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelEpubOptimizeBtn">Hủy</button>
+            <button class="btn btn-primary" id="confirmEpubOptimizeBtn">Bắt đầu tối ưu</button>
+          </div>
+        </div>
+      </div>

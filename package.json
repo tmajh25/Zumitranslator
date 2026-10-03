@@ -1,0 +1,16 @@
+{
+  "name": "zumitrans",
+  "version": "1.0.0",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "docx": "^9.6.1",
+    "electron": "^41.2.0",
+    "epub2": "^3.0.2",
+    "jszip": "^3.10.1",
+    "mammoth": "^1.12.0"
+  }
+}

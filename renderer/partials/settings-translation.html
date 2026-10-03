@@ -1,0 +1,262 @@
+          <div class="settings-tab-pane hidden" id="settingsPaneTranslation">
+            <!-- Translation Languages -->
+            <div class="setting-card" id="languageSection">
+              <h3 id="languageSectionTitle">Ngôn ngữ dịch thuật mặc định</h3>
+              <div id="languageGridContainer">
+                <div class="settings-lang-grid" id="settingsLangGrid">
+                  <div class="input-group-vertical">
+                    <label class="setting-label-small">Ngôn ngữ nguồn</label>
+                    <select id="sourceLangSelect" class="setting-input">
+                      <option value="auto" selected>Tự nhận diện</option>
+                      <option value="en">English (UK/US)</option>
+                      <option value="ja">Tiếng Nhật (日本語)</option>
+                      <option value="ko">Tiếng Hàn (한국어)</option>
+                      <option value="zh-CN">Tiếng Trung (Giản thể)</option>
+                      <option value="zh-TW">Tiếng Trung (Phồn thể)</option>
+                      <option value="vi">Tiếng Việt</option>
+                      <option value="fr">Tiếng Pháp</option>
+                      <option value="de">Tiếng Đức</option>
+                      <option value="es">Tiếng Tây Ban Nha</option>
+                    </select>
+                  </div>
+                  <div class="input-group-vertical">
+                    <label class="setting-label-small">Ngôn ngữ đích</label>
+                    <select id="targetLangSelect" class="setting-input">
+                      <option value="vi" selected>Tiếng Việt</option>
+                      <option value="en">English (UK/US)</option>
+                      <option value="ja">Tiếng Nhật (日本語)</option>
+                      <option value="ko">Tiếng Hàn (한국어)</option>
+                      <option value="zh-CN">Tiếng Trung (Giản thể)</option>
+                      <option value="zh-TW">Tiếng Trung (Phồn thể)</option>
+                      <option value="fr">Tiếng Pháp</option>
+                      <option value="de">Tiếng Đức</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <p class="option-hint" style="margin-top: 8px;">
+                Cặp ngôn ngữ mặc định được sử dụng cho tính năng Dịch văn bản và Dịch file sách.
+              </p>
+            </div>
+
+            <!-- Glossary Section -->
+            <div class="setting-card hidden" id="glossarySection">
+              <div class="card-title-row">
+                <h3>Glossary (Thuật ngữ, Địa danh & Nhân vật)</h3>
+                <button class="text-link" id="addGlossaryItem">+ Thêm từ</button>
+              </div>
+              <div id="glossaryList" class="glossary-list">
+                <!-- Glossary items will be added here -->
+              </div>
+              <span class="option-hint">Giúp AI ghi nhớ tên nhân vật, địa danh hoặc thuật ngữ cố định.</span>
+            </div>
+
+            <!-- Profiler AI Settings -->
+            <div class="setting-card" id="profilerSettingsCard">
+              <div class="setting-card-header">
+                <div class="setting-title-wrap">
+                  <h3>AI Quét Hồ sơ nhân vật & Thuật ngữ</h3>
+                </div>
+              </div>
+              
+              <div class="settings-lang-grid">
+                <div class="input-group-vertical">
+                  <label class="setting-label-small" for="profilerProviderSetting">Nhà cung cấp AI quét</label>
+                  <select id="profilerProviderSetting" class="setting-input">
+                    <option value="auto">Tự động (Theo AI Dịch)</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="groq">Groq Cloud</option>
+                    <option value="cerebras">Cerebras</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="custom">Custom API</option>
+                  </select>
+                </div>
+
+                <div class="input-group-vertical">
+                  <label class="setting-label-small" for="profilerModelSetting">Model AI quét chính</label>
+                  <select id="profilerModelSetting" class="setting-input">
+                    <option value="auto">Tự động (Theo model dịch)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Dedicated Profiler Fallback Chain -->
+              <div id="profilerFallbackWrap" style="margin-top: 14px; padding: 14px 16px; background: var(--bg-tertiary); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Trình tự xoay tua Quét (Dự phòng khi AI quét hết Quota/Rate Limit):</span>
+                  <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="clearProfilerFallbackBtn" title="Chỉ dùng 1 model quét duy nhất, không dự phòng" style="padding: 3px 10px; font-size: 11.5px;">Dùng đơn lẻ</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="resetProfilerFallbackBtn" title="Khôi phục danh sách quét mặc định" style="padding: 3px 10px; font-size: 11.5px;">Mặc định</button>
+                  </div>
+                </div>
+
+                <!-- Active Profiler Interleaved Chain Display -->
+                <div class="fallback-chain-flow" id="profilerFallbackChainFlow" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; min-height: 36px;">
+                  <!-- Dynamic interleaved chips injected here -->
+                </div>
+
+                <!-- Add Step Selector Row for Profiler -->
+                <div class="fallback-add-step-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; border-top: 1px dashed var(--border-light); padding-top: 10px; font-size: 12px;">
+                  <span style="color: var(--text-secondary); font-weight: 500;">+ Thêm vào chuỗi quét:</span>
+                  <select id="chainAddProfilerProviderSelect" class="setting-input" style="width: auto; padding: 3px 8px; font-size: 12px;">
+                    <option value="gemini">Google Gemini</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="groq">Groq Cloud</option>
+                    <option value="cerebras">Cerebras</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="custom">Custom API</option>
+                  </select>
+                  <select id="chainAddProfilerModelSelect" class="setting-input" style="width: auto; padding: 3px 8px; font-size: 12px;">
+                    <!-- Populated dynamically -->
+                  </select>
+                  <button type="button" class="btn btn-secondary btn-sm" id="chainAddProfilerStepBtn" style="padding: 3px 10px; font-size: 12px;">+ Thêm</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Model & AI Fallback Chain Section -->
+            <div class="setting-card" id="fallbackSection">
+              <div class="setting-card-header">
+                <div class="setting-title-wrap">
+                  <h3>Trình tự Model & AI Dự Phòng (Dịch truyện & File)</h3>
+                </div>
+              </div>
+
+              <div class="setting-item-row" style="margin-top: 4px;">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="enableFallback" checked>
+                  <label for="enableFallback">Tự động chuyển sang Model hoặc AI dự phòng khi hết Quota / lỗi mạng</label>
+                </div>
+              </div>
+
+              <!-- Unified Fallback Chain Configuration -->
+              <div id="fallbackModelConfigWrap" style="margin-top: 14px; padding: 14px 16px; background: var(--bg-tertiary); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Trình tự xoay tua (Dùng ‹ › để xếp thứ tự đan xen các AI, × để xóa):</span>
+                  <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="clearModelFallbackBtn" title="Chỉ dùng 1 model chính duy nhất, không dự phòng" style="padding: 3px 10px; font-size: 11.5px;">Dùng đơn lẻ</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="resetModelFallbackBtn" title="Khôi phục danh sách mặc định" style="padding: 3px 10px; font-size: 11.5px;">Mặc định</button>
+                  </div>
+                </div>
+
+                <!-- Active Interleaved Chain Display -->
+                <div class="fallback-chain-flow" id="fallbackChainFlow" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; min-height: 36px;">
+                  <!-- Dynamic interleaved chips injected here -->
+                </div>
+
+                <!-- Add Step Selector Row -->
+                <div class="fallback-add-step-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; border-top: 1px dashed var(--border-light); padding-top: 10px; font-size: 12px;">
+                  <span style="color: var(--text-secondary); font-weight: 500;">+ Thêm vào chuỗi:</span>
+                  <select id="chainAddProviderSelect" class="setting-input" style="width: auto; padding: 3px 8px; font-size: 12px;">
+                    <option value="gemini">Google Gemini</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="groq">Groq Cloud</option>
+                    <option value="cerebras">Cerebras</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="custom">Custom API</option>
+                  </select>
+                  <select id="chainAddModelSelect" class="setting-input" style="width: auto; padding: 3px 8px; font-size: 12px;">
+                    <!-- Populated dynamically -->
+                  </select>
+                  <button type="button" class="btn btn-secondary btn-sm" id="chainAddStepBtn" style="padding: 3px 10px; font-size: 12px;">+ Thêm</button>
+                </div>
+
+                <div class="setting-item-row" style="margin-top: 12px; border-top: 1px dashed var(--border-light); padding-top: 10px;">
+                  <div class="checkbox-wrapper">
+                    <input type="checkbox" id="fallbackToGoogleFree" checked>
+                    <label for="fallbackToGoogleFree">Dùng Google Translate khi tất cả AI trong chuỗi đều hết Quota</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- File Translation Configuration -->
+            <div class="setting-card" id="fileTranslationConfigSection">
+              <h3>Cấu hình dịch File & Sách</h3>
+              
+              <div class="settings-lang-grid" style="margin-top: 12px; margin-bottom: 14px;">
+                <div class="setting-item-row">
+                  <div class="checkbox-wrapper">
+                    <input type="checkbox" id="enableChunking" checked>
+                    <label for="enableChunking">Chia nhỏ đoạn văn (Chunking)</label>
+                  </div>
+                </div>
+                <div class="setting-item-row">
+                  <div class="checkbox-wrapper">
+                    <input type="checkbox" id="enableDelay" checked>
+                    <label for="enableDelay">Delay request</label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chunking Configuration Details -->
+              <div id="chunkSettingsContainer" style="margin-bottom: 16px; padding: 12px 14px; background: var(--bg-tertiary); border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+                <div class="input-group-vertical">
+                  <label class="setting-label-small" for="chunkModeSelect" style="font-weight: 600;">Phương thức chia nhỏ văn bản</label>
+                  <select id="chunkModeSelect" class="setting-input">
+                    <option value="auto" selected>Tự động theo Output Token tối đa của Model</option>
+                    <option value="manual">Thủ công</option>
+                  </select>
+                </div>
+
+                <!-- Auto Token Info Banner -->
+                <div id="chunkAutoInfoBanner" style="margin-top: 10px; font-size: 11.5px; line-height: 1.5; color: var(--text-secondary);">
+                  <div style="display: flex; align-items: center; gap: 6px; color: var(--accent-primary); font-weight: 600;">
+                    <span id="chunkModelBadge">Model: Google Gemini</span>
+                    <span>•</span>
+                    <span id="chunkTokenLimitBadge">Max Output: 65,536 tokens</span>
+                  </div>
+                </div>
+
+                <!-- Manual Chunk Size Input -->
+                <div id="chunkManualGroup" class="hidden" style="margin-top: 12px;">
+                  <label class="setting-label-small" for="chunkSize">Kích thước chunk (từ)</label>
+                  <input type="number" id="chunkSize" value="3000" min="500" max="30000" step="500" class="setting-input">
+                </div>
+              </div>
+
+              <div class="settings-lang-grid">
+                <div class="input-group-vertical" id="requestDelayGroup">
+                  <label class="setting-label-small">Delay giữa các request (ms)</label>
+                  <input type="number" id="requestDelay" value="1000" min="0" max="10000" step="100" class="setting-input">
+                </div>
+              </div>
+              
+              <div class="setting-item-row" style="margin-top: 16px;">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="enableMultiThreading">
+                  <label for="enableMultiThreading">Kích hoạt dịch đa luồng (Multi-threading)</label>
+                </div>
+              </div>
+
+              <div id="multiThreadSettings" class="input-group-vertical hidden" style="margin-top: 12px; padding-left: 28px;">
+                <label class="setting-label-small">Số luồng dịch cùng lúc</label>
+                <input type="number" id="translationThreads" value="2" min="2" max="10" step="1" class="setting-input">
+              </div>
+              
+              <div class="setting-item-row" style="margin-top: 16px;">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="translateChapterTitles" checked>
+                  <label for="translateChapterTitles">Dịch tiêu đề chương</label>
+                </div>
+              </div>
+
+              <div id="titleTranslationModeSection" class="input-group-vertical" style="margin-top: 8px; padding-left: 28px;">
+                <label class="setting-label-small">Dịch tiêu đề bằng:</label>
+                <select id="titleTranslationMode" class="setting-input">
+                  <option value="ai">AI đang chọn</option>
+                  <option value="google">Google Translate</option>
+                </select>
+              </div>
+
+              <div class="setting-item-row" style="margin-top: 16px;">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="autoScanChapters">
+                  <label for="autoScanChapters">Tự động quét nhân vật & từ điển trước khi dịch từng chương (tốn thêm token)</label>
+              </div>
+            </div>
+          </div>

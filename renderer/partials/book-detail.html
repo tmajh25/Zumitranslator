@@ -1,0 +1,372 @@
+        <div id="bookDetailView" class="hidden">
+          <div class="detail-header" style="margin-bottom: 12px;">
+            <button class="back-link" id="backToBookshelf">
+              <span>← Quay lại tủ truyện</span>
+            </button>
+          </div>
+
+          <!-- File Info (Hidden per user request) -->
+          <div class="file-info hidden" id="fileInfo" style="display: none !important;">
+            <div class="file-info-header">
+              <div class="file-details">
+                <h3 id="fileName">filename.epub</h3>
+                <div class="file-meta">
+                  <span id="fileType" class="format-badge">.epub</span>
+                  <span id="fileCharCount">0 từ</span>
+                </div>
+              </div>
+              
+              <button class="icon-btn remove-file-btn" id="removeFile" title="Xóa file">✕</button>
+            </div>
+            <div id="fileLanguagesBar" class="file-languages-bar" style="width: 100%;"></div>
+          </div>
+
+          <!-- Hidden anchors for backward compatibility -->
+          <span id="fileProviderLabel" class="hidden"></span>
+          <span id="fileLangsLabel" class="hidden"></span>
+          <span id="toggleBookGlossaryBtn" class="hidden"></span>
+          <span id="toggleCharacterProfileBtn" class="hidden"></span>
+
+          <!-- Chapter List & Content Workspace (EPUB-Forge Style) -->
+          <div class="chapter-list-section hidden" id="chapterListSection">
+              <div class="section-header">
+                <div class="section-title-wrap">
+                  <h3>Danh sách & Nội dung chương</h3>
+                </div>
+                <div class="header-actions">
+                  <button class="btn btn-sm btn-primary btn-translate" id="translateFileBtn" title="Bắt đầu dịch các chương đã chọn">
+                    <span>Bắt đầu dịch</span>
+                  </button>
+                  <button class="btn btn-sm btn-secondary hidden" id="cancelTranslation" title="Hủy tiến trình dịch">
+                    <span>Hủy</span>
+                  </button>
+                  <button class="btn btn-sm btn-success hidden" id="saveFileBtn" title="Lưu file dịch">
+                    <span>Lưu file dịch</span>
+                  </button>
+                  <span class="header-action-divider" style="width: 1px; height: 16px; background: var(--border-medium); margin: 0 4px;"></span>
+                  <button class="btn btn-sm btn-secondary" id="sectionBookGlossaryBtn" title="Xem & sửa Glossary riêng của truyện">Glossary (<span id="sectionBookGlossaryCount">0</span>)</button>
+                  <button class="btn btn-sm btn-secondary" id="sectionCharacterProfileBtn" title="Xem & sửa Hồ sơ nhân vật của truyện">Nhân vật (<span id="sectionCharacterCount">0</span>)</button>
+
+                  <!-- Menu thao tác mở rộng ⋯ -->
+                  <div class="header-dropdown-wrap">
+                    <button type="button" class="btn btn-sm btn-secondary btn-more-actions" id="headerMoreActionsBtn" data-dropdown-toggle="headerMoreActionsMenu" title="Thao tác khác">⋯</button>
+                    <div class="dropdown-menu hidden" id="headerMoreActionsMenu">
+                      <button type="button" class="dropdown-item" id="selectAllChapters"><span>Chọn tất cả chương</span></button>
+                      <button type="button" class="dropdown-item" id="deselectAllChapters"><span>Bỏ chọn tất cả</span></button>
+                      <div class="dropdown-divider"></div>
+                      <button type="button" class="dropdown-item" id="bulkTranslateTitlesBtn"><span>Dịch tiêu đề hàng loạt</span></button>
+                      <button type="button" class="dropdown-item" id="mergeSelectedChaptersBtn"><span>Gộp các chương đã chọn</span></button>
+                      <button type="button" class="dropdown-item" id="bulkReplaceSourceBtn"><span>Tìm & thay thế text</span></button>
+                      <button type="button" class="dropdown-item prompt-quick-btn hidden" id="fileQuickPromptBtn"><span>Prompt AI</span></button>
+                      <div class="dropdown-divider"></div>
+                      <button type="button" class="dropdown-item text-danger" id="resetAllTranslationsBtn"><span>Dịch lại từ đầu (Reset)</span></button>
+                      <button type="button" class="dropdown-item text-danger" id="deleteSelectedSourceChapters"><span>Xóa các chương đã chọn</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Inline Book-Specific Glossary Drawer (Below Danh sách & Nội dung chương) -->
+              <div class="book-glossary-drawer hidden" id="bookGlossaryDrawer" style="margin-bottom: 16px;">
+                <div class="book-glossary-header">
+                  <div class="book-glossary-title-group">
+                    <div class="drawer-title-left">
+                      <span class="book-glossary-title">Bảng Glossary riêng của truyện</span>
+                      <span class="badge" id="bookGlossaryBadge">0 từ</span>
+                      <label class="switch-toggle-label" title="Bật/Tắt áp dụng Glossary khi AI dịch">
+                        <input type="checkbox" id="toggleBookGlossaryActive" checked>
+                        <span>Áp dụng</span>
+                      </label>
+                      <span class="book-glossary-hint">AI đọc chương và tự động dò thuật ngữ, địa danh, tên nhân vật vào bảng</span>
+                    </div>
+                    <button type="button" class="icon-btn-sm" id="closeBookGlossaryBtn" title="Đóng Glossary">✕</button>
+                  </div>
+                  <div class="book-glossary-actions">
+                    <div class="scan-provider-selector-wrap" title="Chọn AI chuyên trách đọc & quét thuật ngữ, địa danh, tên nhân vật">
+                      <label for="glossaryScanProviderSelect">AI quét:</label>
+                      <select id="glossaryScanProviderSelect" class="scan-provider-select">
+                        <option value="auto">Theo AI Dịch</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="groq">Groq</option>
+                        <option value="cerebras">Cerebras</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="custom">Custom API</option>
+                      </select>
+                    </div>
+                    <div class="scan-provider-selector-wrap" title="Chọn Model AI chuyên trách quét">
+                      <label for="glossaryScanModelSelect">Model:</label>
+                      <select id="glossaryScanModelSelect" class="scan-provider-select scan-model-select">
+                        <option value="auto">Mặc định</option>
+                      </select>
+                    </div>
+                    <div class="search-input-wrap" style="position: relative; display: inline-flex; align-items: center;">
+                      <input type="text" id="glossarySearchInput" class="form-input form-input-sm" placeholder="Tìm từ..." style="width: 130px; padding-right: 20px; font-size: 12px;">
+                      <button type="button" id="clearGlossarySearch" class="btn-clear hidden" style="position: absolute; right: 4px; background: none; border: none; cursor: pointer; font-size: 11px; color: var(--text-tertiary);">✕</button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" id="aiScanGlossaryBtn" title="AI đọc các chương và tự động dò thuật ngữ, địa danh, tên nhân vật...">
+                      <span>Quét từ điển AI</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="addBookGlossaryItem">+ Thêm từ</button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="exportBookGlossaryBtn" title="Xuất toàn bộ từ điển ra tệp JSON để sao lưu hoặc dùng cho truyện khác">
+                      <span>Xuất JSON</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="importBookGlossaryBtn" title="Nhập từ điển từ tệp JSON hoặc TXT">
+                      <span>Nhập JSON</span>
+                    </button>
+                    <input type="file" id="importBookGlossaryInput" accept=".json,.txt" class="hidden">
+                    <button type="button" class="btn btn-sm btn-secondary" id="inheritGlobalGlossaryBtn" title="Kế thừa từ điển chung từ Cài đặt">Kế thừa chung</button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="clearBookGlossaryBtn" title="Xóa tất cả từ điển của truyện này">Xóa hết</button>
+                  </div>
+                </div>
+
+                <!-- Loading bar when AI is scanning glossary -->
+                <div id="bookGlossaryAiLoading" class="character-ai-loading hidden">
+                  <div class="ai-loading-spinner"></div>
+                  <span id="glossaryAiLoadingText">AI đang đọc nội dung chương và dò thuật ngữ, địa danh, tên nhân vật...</span>
+                </div>
+
+                <div id="bookGlossaryEmpty" class="book-glossary-empty">
+                  Chưa có từ điển riêng nào cho truyện này. Hệ thống sẽ tự động dò thuật ngữ, địa danh, tên nhân vật khi bạn dịch truyện, hoặc bạn có thể bấm <strong>"Quét từ điển AI"</strong> hoặc <strong>"+ Thêm từ"</strong>.
+                </div>
+
+                <div id="bookGlossaryTableWrap" class="glossary-table-wrap">
+                  <table class="character-table" id="glossaryTable">
+                    <thead>
+                      <tr>
+                        <th style="width: 32px; text-align: center;">
+                          <input type="checkbox" id="toggleAllGlossaryRows" checked title="Bật/Tắt tất cả từ trong bảng">
+                        </th>
+                        <th style="width: 44%;">Thuật ngữ / Địa danh / Tên gốc</th>
+                        <th style="width: 44%;">Dịch nghĩa chuẩn</th>
+                        <th style="width: 36px; text-align: center;">✕</th>
+                      </tr>
+                    </thead>
+                    <tbody id="bookGlossaryTableBody">
+                      <!-- Danh sách từ điển do AI điền hoặc nhập tay -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Inline Book-Specific Character Profile Drawer (Below Danh sách & Nội dung chương) -->
+              <div class="character-profile-drawer hidden" id="characterProfileDrawer" style="margin-bottom: 16px;">
+                <div class="character-profile-header">
+                  <div class="character-profile-title-group">
+                    <div class="drawer-title-left">
+                      <span class="character-profile-title">Bảng Hồ sơ nhân vật & Xưng hô</span>
+                      <span class="badge" id="characterProfileBadge">0 nhân vật</span>
+                      <label class="switch-toggle-label" title="Bật/Tắt áp dụng Hồ sơ nhân vật khi AI dịch">
+                        <input type="checkbox" id="toggleCharacterProfileActive" checked>
+                        <span>Áp dụng</span>
+                      </label>
+                      <span class="character-profile-hint">AI đọc chương và tự động điền các dòng vào bảng</span>
+                    </div>
+                    <button type="button" class="icon-btn-sm" id="closeCharacterProfileBtn" title="Đóng Hồ sơ nhân vật">✕</button>
+                  </div>
+                  <div class="character-profile-actions">
+                    <div class="scan-provider-selector-wrap" title="Chọn AI chuyên trách đọc & quét hồ sơ nhân vật">
+                      <label for="characterScanProviderSelect">AI quét:</label>
+                      <select id="characterScanProviderSelect" class="scan-provider-select">
+                        <option value="auto">Theo AI Dịch</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="groq">Groq</option>
+                        <option value="cerebras">Cerebras</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="custom">Custom API</option>
+                      </select>
+                    </div>
+                    <div class="scan-provider-selector-wrap" title="Chọn Model AI chuyên trách đọc & quét hồ sơ">
+                      <label for="characterScanModelSelect">Model:</label>
+                      <select id="characterScanModelSelect" class="scan-provider-select scan-model-select">
+                        <option value="auto">Mặc định</option>
+                      </select>
+                    </div>
+                    <div class="search-input-wrap" style="position: relative; display: inline-flex; align-items: center;">
+                      <input type="text" id="characterSearchInput" class="form-input form-input-sm" placeholder="Tìm nhân vật..." style="width: 140px; padding-right: 20px; font-size: 12px;">
+                      <button type="button" id="clearCharacterSearch" class="btn-clear hidden" style="position: absolute; right: 4px; background: none; border: none; cursor: pointer; font-size: 11px; color: var(--text-tertiary);">✕</button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" id="aiScanCharactersBtn" title="AI đọc các chương và tự động phân tích nhân vật, xưng hô...">
+                      <span>Quét nhân vật AI</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="consolidateCharacterProfileBtn" title="Tự động lọc trùng, chuẩn hóa và tinh gọn danh xưng, đại từ cho toàn bộ nhân vật">
+                      <span>Tinh gọn</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="addCharacterProfileBtn">+ Thêm nhân vật</button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="exportCharacterProfileBtn" title="Xuất toàn bộ hồ sơ nhân vật ra tệp JSON để sao lưu hoặc dùng cho truyện khác">
+                      <span>Xuất JSON</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="importCharacterProfileBtn" title="Nhập hồ sơ nhân vật từ tệp JSON">
+                      <span>Nhập JSON</span>
+                    </button>
+                    <input type="file" id="importCharacterProfileInput" accept=".json" class="hidden">
+                    <button type="button" class="btn btn-sm btn-secondary" id="clearCharacterProfileBtn" title="Xóa tất cả nhân vật của truyện này">Xóa hết</button>
+                  </div>
+                </div>
+
+                <!-- Loading bar when AI is analyzing -->
+                <div id="characterProfileAiLoading" class="character-ai-loading hidden">
+                  <div class="ai-loading-spinner"></div>
+                  <span id="characterAiLoadingText">AI đang đọc nội dung chương và phân tích nhân vật, xưng hô...</span>
+                </div>
+
+                <div id="characterProfileEmpty" class="character-profile-empty">
+                  Bảng hồ sơ hiện đang trống. Hệ thống sẽ tự động phân tích khi bạn dịch truyện, hoặc bạn có thể bấm <strong>"+ Thêm nhân vật"</strong> để nhập tay.
+                </div>
+
+                <!-- Dạng bảng (Table View) -->
+                <div id="characterProfileTableWrap" class="character-table-wrap">
+                  <table class="character-table" id="characterTable">
+                    <thead>
+                      <tr>
+                        <th style="width: 32px; text-align: center;">
+                          <input type="checkbox" id="toggleAllCharacterRows" checked title="Bật/Tắt tất cả nhân vật trong bảng">
+                        </th>
+                        <th style="width: 11%;">Tên gốc</th>
+                        <th style="width: 12%;">Tên dịch</th>
+                        <th style="width: 8%;">Giới tính</th>
+                        <th style="width: 17%;">Mối quan hệ & Vai trò</th>
+                        <th style="width: 33%;">Xưng hô (Với ai, Tự xưng, Gọi đối phương)</th>
+                        <th style="width: 15%;">Ghi chú</th>
+                        <th style="width: 34px; text-align: center;">✕</th>
+                      </tr>
+                    </thead>
+                    <tbody id="characterTableBody">
+                      <!-- Các dòng do AI điền hoặc nhập tay -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Inline Quick Prompt Drawer for File Translation -->
+              <div class="inline-prompt-bar hidden" id="fileInlinePromptBar" style="margin-bottom: 16px;">
+                <div class="inline-prompt-header">
+                  <span class="inline-prompt-title">Lệnh dịch thuật file AI (System Prompt):</span>
+                  <div class="inline-prompt-actions">
+                    <button type="button" class="text-link" id="filePromptResetBtn" style="font-size: 11.5px;">Khôi phục mặc định</button>
+                    <button type="button" class="icon-btn-sm" id="closeFilePromptBtn" title="Đóng thanh prompt">✕</button>
+                  </div>
+                </div>
+                <textarea id="fileInlinePromptInput" class="setting-input inline-prompt-textarea" rows="2" placeholder="Nhập prompt dịch thuật cho truyện..."></textarea>
+              </div>
+
+              <!-- Progress (inside chapter section) -->
+              <div class="progress-section hidden" id="progressSection" style="margin-bottom: 14px;">
+                <div class="progress-header">
+                  <span class="progress-label" id="progressLabel">Đang dịch...</span>
+                  <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                  <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="progress-details">
+                  <span id="progressChunks">0/0 chunks</span>
+                  <span id="progressTime">--:--</span>
+                </div>
+              </div>
+
+              <div class="epub-forge-workspace">
+                <!-- CỘT BÊN TRÁI: LIST CHƯƠNG -->
+                <div class="epub-sidebar">
+                  <div class="epub-sidebar-toolbar">
+                    <div class="epub-sidebar-header-row">
+                      <span class="epub-sidebar-title">Danh sách chương</span>
+                      <button class="icon-btn-sm" id="epubCollapseSidebarBtn" title="Thu gọn danh sách chương">‹</button>
+                    </div>
+                    <div id="sidebarLanguagesWidget" class="sidebar-languages-widget"></div>
+                    <div class="epub-search-box">
+                      <input type="text" id="chapterSearchInput" class="epub-search-input" placeholder="Tìm tên chương..." autocomplete="off">
+                      <button id="clearChapterSearch" class="epub-search-clear hidden" title="Xóa tìm kiếm">✕</button>
+                    </div>
+                  </div>
+
+                  <div class="chapter-list epub-chapter-nav" id="chapterList">
+                    <!-- Danh sách chương render ở đây -->
+                  </div>
+                </div>
+
+                <!-- CỘT BÊN PHẢI: NỘI DUNG CHƯƠNG -->
+                <div class="epub-editor-pane" id="epubContentPane">
+                  <div class="epub-content-empty" id="epubContentEmpty">
+                    <p class="empty-title">Chưa chọn chương nào</p>
+                    <p class="empty-desc">Nhấp vào bất kỳ chương nào ở danh sách bên trái để xem nội dung.</p>
+                  </div>
+
+                  <div class="epub-content-viewer hidden" id="epubContentViewer">
+                    <div class="epub-viewer-header">
+                      <div class="epub-viewer-header-top">
+                        <div class="epub-viewer-meta">
+                          <h4 id="epubViewerTitle" class="epub-viewer-title">Tên chương</h4>
+                          <div class="epub-viewer-tags">
+                            <span id="epubViewerCharCount" class="epub-char-count">0 từ</span>
+                            <span id="epubViewerStatusBadge" class="format-badge-transparent"></span>
+                            <span id="epubViewerWarningBadge" class="foreign-badge hidden">Sót chữ</span>
+                            <span id="epubViewerR18Badge" class="r18-badge-micro hidden" title="Chương 18+">18+</span>
+                            <span id="epubViewerImageBadge" class="image-badge-micro hidden" title="Chương có hình ảnh minh họa"><svg class="image-badge-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span id="epubViewerImageCount"></span></span>
+                          </div>
+                        </div>
+                        
+                        <div class="epub-viewer-top-actions">
+                          <div class="epub-tab-group" id="epubViewToggleGroup">
+                            <button class="btn-tab-pill active" id="epubShowTranslatedBtn" data-mode="translated">Bản dịch</button>
+                            <button class="btn-tab-pill" id="epubShowSourceBtn" data-mode="source">Bản gốc</button>
+                          </div>
+                          <button class="btn btn-secondary btn-sm" id="epubToggleTocBtn" title="Thu gọn / Mở rộng danh sách chương">
+                            <span id="epubToggleTocText">Ẩn DS</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="epub-viewer-actions">
+                        <button class="btn btn-primary btn-sm" id="epubRetranslateChapterBtn" title="Xóa bản dịch cũ và dịch lại chương này bằng AI" style="background: var(--accent-primary); color: #fff;">Dịch lại chương</button>
+                        <button class="btn btn-secondary btn-sm" id="epubEditContentBtn" title="Sửa nội dung chương">Sửa nội dung</button>
+                        <button class="btn btn-primary btn-sm hidden" id="epubSaveContentBtn" title="Lưu thay đổi nội dung">Lưu</button>
+                        <button class="btn btn-secondary btn-sm hidden" id="epubCancelEditBtn" title="Hủy chỉnh sửa">Hủy</button>
+                        <button class="btn btn-sm auto-fix-btn hidden" id="epubAutoFixBtn">Sửa AI</button>
+
+                        <!-- Menu thao tác mở rộng của chương ⋯ -->
+                        <div class="header-dropdown-wrap">
+                          <button type="button" class="btn btn-secondary btn-sm btn-more-actions" id="chapterMoreActionsBtn" data-dropdown-toggle="chapterMoreActionsMenu" title="Thao tác khác cho chương này">⋯</button>
+                          <div class="dropdown-menu hidden" id="chapterMoreActionsMenu">
+                            <button type="button" class="dropdown-item" id="epubRenameChapterBtn"><span>Đổi tên chương</span></button>
+                            <button type="button" class="dropdown-item" id="epubTranslateTitleBtn"><span>Dịch tiêu đề</span></button>
+                            <button type="button" class="dropdown-item" id="epubSplitChapterBtn"><span>Tách chương</span></button>
+                            <button type="button" class="dropdown-item" id="epubCopyBtn"><span>Sao chép</span></button>
+                            <div class="dropdown-divider"></div>
+                            <button type="button" class="dropdown-item text-danger" id="epubClearChapterTranslationBtn"><span>Xóa bản dịch chương này</span></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="epub-viewer-body" id="epubViewerBody">
+                      <!-- Nội dung chương -->
+                    </div>
+                    <textarea class="epub-viewer-editor hidden" id="epubViewerEditor" placeholder="Nhập nội dung chỉnh sửa chương..."></textarea>
+
+                    <div class="epub-viewer-footer">
+                      <button class="btn btn-secondary btn-sm" id="epubPrevBtn">← Chương trước</button>
+                      <span class="epub-footer-counter" id="epubChapterIndexLabel">Chương 1 / 1</span>
+                      <button class="btn btn-secondary btn-sm" id="epubNextBtn">Chương sau →</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chapter Context Menu (Right Click on Chapter in List) -->
+            <div class="context-menu hidden" id="chapterContextMenu">
+              <button type="button" class="dropdown-item" id="ctxRetranslateChapter"><span>Dịch lại chương này</span></button>
+              <button type="button" class="dropdown-item" id="ctxEditChapter"><span>Sửa nội dung</span></button>
+              <button type="button" class="dropdown-item" id="ctxRenameChapter"><span>Đổi tên chương</span></button>
+              <button type="button" class="dropdown-item" id="ctxTranslateTitle"><span>Dịch tiêu đề</span></button>
+              <button type="button" class="dropdown-item" id="ctxSplitChapter"><span>Tách chương</span></button>
+              <button type="button" class="dropdown-item" id="ctxCopyChapter"><span>Sao chép</span></button>
+              <div class="dropdown-divider"></div>
+              <button type="button" class="dropdown-item text-danger" id="ctxClearTranslation"><span>Xóa bản dịch</span></button>
+              <button type="button" class="dropdown-item text-danger" id="ctxDeleteChapter"><span>Xóa khỏi sách</span></button>
+            </div>
+        </div>

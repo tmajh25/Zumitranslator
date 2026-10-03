@@ -1,0 +1,80 @@
+      <div class="panel" id="panel-file">
+        <div class="panel-header bookshelf-header">
+          <div>
+            <h1>Tủ truyện & Quản lý EPUB</h1>
+            <p class="panel-subtitle">Quản lý kho sách, xem metadata, mục lục TOC và tiếp tục dịch</p>
+          </div>
+          <div class="bookshelf-header-actions">
+            <button class="btn btn-primary" id="addBookBtn">Thêm sách (EPUB, TXT, DOCX)</button>
+          </div>
+        </div>
+
+        <!-- Minimal Stats Strip -->
+        <div class="bookshelf-stats-strip" id="bookshelfStats">
+          <div class="stat-pill">
+            <strong class="stat-num" id="statTotalBooks">0</strong>
+            <span class="stat-label">đầu sách</span>
+          </div>
+          <span class="stat-divider">•</span>
+          <div class="stat-pill">
+            <strong class="stat-num" id="statTotalChapters">0</strong>
+            <span class="stat-label">chương</span>
+          </div>
+          <span class="stat-divider">•</span>
+          <div class="stat-pill">
+            <strong class="stat-num" id="statInProgress">0</strong>
+            <span class="stat-label">đang dịch</span>
+          </div>
+          <span class="stat-divider">•</span>
+          <div class="stat-pill">
+            <strong class="stat-num" id="statCompleted">0</strong>
+            <span class="stat-label">hoàn thành</span>
+          </div>
+        </div>
+
+        <!-- Bookshelf Workspace Toolbar -->
+        <div class="bookshelf-toolbar" id="bookshelfToolbar">
+          <div class="toolbar-search-box">
+            <input type="text" id="bookshelfSearchInput" placeholder="Tìm theo tên truyện, tác giả..." />
+            <button id="clearBookshelfSearch" class="clear-search-btn hidden" title="Xóa tìm kiếm">&times;</button>
+          </div>
+
+          <div class="toolbar-actions">
+            <div class="filter-pills" id="bookshelfFilterPills">
+              <button class="filter-pill active" data-filter="all">Tất cả</button>
+              <button class="filter-pill" data-filter="in-progress">Đang dịch</button>
+              <button class="filter-pill" data-filter="completed">Hoàn thành</button>
+            </div>
+
+            <div class="sort-box">
+              <span class="sort-label">Sắp xếp:</span>
+              <select id="bookshelfSortSelect" class="form-select-sm">
+                <option value="recent">Mới đọc gần đây</option>
+                <option value="title">Tên sách (A-Z)</option>
+                <option value="progress">Tiến độ (%)</option>
+                <option value="chapters">Số chương</option>
+              </select>
+            </div>
+
+            <div class="view-mode-toggle">
+              <button id="viewGridBtn" class="view-mode-btn active" title="Dạng lưới">Lưới</button>
+              <button id="viewListBtn" class="view-mode-btn" title="Dạng bảng">Bảng</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bookshelf Grid -->
+        <div class="bookshelf-grid" id="bookshelfGrid">
+          <!-- Book cards will be injected here -->
+        </div>
+
+        <!-- Bookshelf Table/List View -->
+        <div class="bookshelf-list hidden" id="bookshelfList">
+          <!-- Table will be injected here -->
+        </div>
+
+
+        <div data-partial="inspector-modal.html"></div>
+
+        <div data-partial="book-detail.html"></div>
+      </div>

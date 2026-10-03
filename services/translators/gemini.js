@@ -1,0 +1,323 @@
+/**
+ * Google Gemini Generative Language API
+ * Supports API Key Pool & Auto-Rotation on 429/403/503
+ * Supports standard v1beta generateContent
+ * 
+ * TÀI LIỆU CHÍNH THỨC CÁC MODEL GOOGLE GEMINI (BẮT BUỘC TRA CỨU TRƯỚC KHI SỬA HOẶC XÓA):
+ * Official Google Gemini Models Documentation:
+ * -> https://ai.google.dev/gemini-api/docs/models
+ * Danh sách model chính thức bao gồm:
+ * - Gemini 3: gemini-3.8-flash, gemini-3.7-flash, gemini-3.6-flash, gemini-3.5-flash, gemini-3.5-flash-lite, gemini-3.1-pro-preview, gemini-3.1-flash-lite, gemini-3-flash-preview
+ * - Gemini 2.5: gemini-2.5-flash, gemini-2.5-pro, gemini-2.5-flash-lite
+ * - Gemini 2.0 & 1.5: gemini-2.0-flash, gemini-2.0-flash-lite, gemini-1.5-flash, gemini-1.5-pro, gemini-flash-latest
+ * LƯU Ý CHO CÁC AGENT / AI BẢO TRÌ: KHÔNG tự ý xóa, hạ cấp hoặc thay thế các model trên khi chưa kiểm tra tài liệu chính thức từ link trên!
+ */
+
+const { parseApiKeys } = require('./baseTranslator');
+const PromptBuilder = require('./promptBuilder');
+const ResponseCleaner = require('./responseCleaner');
+const EuphemismFilter = require('./euphemismFilter');
+const R18Detector = require('./r18Detector');
+
+let currentKeyIndex = 0;
+
+async function translateGemini({
+  text,
+  sourceLang = 'auto',
+  targetLang = 'vi',
+  customPrompt,
+  apiKey,
+  model = 'gemini-3.8-flash',
+  thinkingLevel = 'medium',
+  safetySetting = 'BLOCK_MEDIUM_AND_ABOVE',
+  temperature = 1.0,
+  glossary = [],
+  characterProfiles = [],
+  context = '',
+  apiEndpoint = '',
+  bookMemory = '',
+  abortSignal = null,
+  _isEuphemismRetry = false
+}) {
+  const keys = parseApiKeys(apiKey);
+  if (keys.length === 0) {
+    throw new Error('Vui lòng nhập API Key cho Google Gemini trong Cài đặt.');
+  }
+
+  const baseUrl = apiEndpoint || 'https://generativelanguage.googleapis.com';
+  let activeModel = model || 'gemini-3.8-flash';
+
+  const r18Detection = R18Detector.detect(text, sourceLang);
+  const effectiveSafetySetting = r18Detection.isR18 ? 'BLOCK_NONE' : safetySetting;
+
+  const instructions = PromptBuilder.buildSystemInstruction({
+    customPrompt,
+    sourceLang,
+    targetLang,
+    glossary,
+    characterProfiles,
+    bookMemory,
+    context,
+    text
+  });
+
+  const contentToTranslate = text;
+
+  const normThinking = (thinkingLevel || 'medium').toLowerCase().trim();
+  const isInteractions = baseUrl.includes('/interactions');
+
+  let response;
+  const triedKeyIndices = new Set();
+  const maxRetriesPerKey = 3;
+
+  while (triedKeyIndices.size < keys.length) {
+    const keyIdx = currentKeyIndex % keys.length;
+    triedKeyIndices.add(keyIdx);
+    const activeKey = keys[keyIdx];
+    const keyNum = keyIdx + 1;
+
+    let keyRetryCount = 0;
+    let switchKey = false;
+
+    while (keyRetryCount <= maxRetriesPerKey) {
+      let url, headers, body;
+
+      if (isInteractions) {
+        url = baseUrl.includes('?') ? `${baseUrl}&key=${activeKey}` : `${baseUrl}?key=${activeKey}`;
+        headers = {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': activeKey,
+          'Api-Revision': '2026-05-20'
+        };
+        body = {
+          model: activeModel,
+          system_instruction: instructions,
+          input: `${instructions}\n\n[VĂN BẢN GỐC]:\n${contentToTranslate}`,
+          generation_config: {
+            temperature: temperature === undefined ? 1.0 : parseFloat(temperature),
+            thinking_level: normThinking
+          }
+        };
+      } else {
+        url = `${baseUrl.replace(/\/$/, '')}/v1beta/models/${activeModel}:generateContent?key=${activeKey}`;
+        headers = {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': activeKey
+        };
+        body = {
+          systemInstruction: {
+            parts: [{ text: instructions }]
+          },
+          contents: [{
+            parts: [{ text: `${instructions}\n\n[VĂN BẢN GỐC CẦN DỊCH]:\n${contentToTranslate}` }]
+          }],
+          generationConfig: {
+            temperature: temperature === undefined ? 1.0 : parseFloat(temperature),
+            maxOutputTokens: ((activeModel || '').includes('2.5') || (activeModel || '').includes('3.') || (activeModel || '').includes('flash-latest')) ? 65536 : 8192
+          },
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: effectiveSafetySetting },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: effectiveSafetySetting },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: effectiveSafetySetting },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: effectiveSafetySetting }
+          ]
+        };
+
+        // Chuẩn hóa Thinking Config theo tài liệu chính thức Google Gemini
+        const isGemini3 = activeModel.includes('3.') || activeModel.startsWith('gemini-3');
+        const isGemini25 = activeModel.includes('2.5') || activeModel.includes('thinking');
+
+        if (isGemini3) {
+          let level = normThinking;
+          const noMinimalModels = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.1-pro'];
+          const cantMinimal = noMinimalModels.some(m => activeModel.includes(m));
+          if (cantMinimal && (level === 'minimal' || level === 'none')) {
+            level = 'low';
+          }
+          const validLevels = ['minimal', 'low', 'medium', 'high'];
+          if (!validLevels.includes(level)) level = 'medium';
+          body.generationConfig.thinkingConfig = {
+            thinkingLevel: level
+          };
+        } else if (isGemini25) {
+          if (normThinking === 'minimal' || normThinking === 'none') {
+            body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+          } else {
+            const budget = normThinking === 'high' ? 8192 : (normThinking === 'medium' ? 4096 : 1024);
+            body.generationConfig.thinkingConfig = { thinkingBudget: budget };
+          }
+        }
+      }
+
+      if (abortSignal && abortSignal.aborted) {
+        throw new Error('Dịch đã bị hủy');
+      }
+
+      const controller = new AbortController();
+      const onAbort = () => controller.abort();
+      if (abortSignal) {
+        abortSignal.addEventListener('abort', onAbort, { once: true });
+      }
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (abortSignal) abortSignal.removeEventListener('abort', onAbort);
+        
+        if (response.ok) break;
+
+        let errPeek = '';
+        try {
+          const clone = response.clone();
+          errPeek = await clone.text();
+        } catch (_) {}
+
+        // Khi 1 key bi 404 (vi du: key moi khong co quyen truy cap model cu 2.5): Chuyen sang key tiep theo
+        if (response.status === 404) {
+          console.warn(`[Gemini (${activeModel})] Key #${keyNum}/${keys.length} khong ho tro model nay (404). Chuyen sang key tiep theo...`);
+          switchKey = true;
+          break;
+        }
+
+        // Fatal key error: 401, 403 hoặc 400 (Key sai) -> đổi ngay không cần retry 3 lần
+        const isFatalKeyError = (response.status === 401 || response.status === 403 || (response.status === 400 && (errPeek.includes('API_KEY') || errPeek.includes('API key'))));
+        if (isFatalKeyError) {
+          console.warn(`[Gemini (${activeModel})] HTTP ${response.status}: Key #${keyNum}/${keys.length} khong hop le hoac bi tu choi. Chuyen key ngay...`);
+          switchKey = true;
+          break;
+        }
+
+        // Lỗi 429 (Rate Limit / Quota) hoặc 503/500 (Quá tải): Thử lại 3 lần trên cùng key này, mỗi lần cách 3s
+        if (response.status === 429 || response.status === 503 || response.status >= 500) {
+          if (abortSignal && abortSignal.aborted) throw new Error('Dịch đã bị hủy');
+          keyRetryCount++;
+          if (keyRetryCount <= maxRetriesPerKey) {
+            console.warn(`[Gemini (${activeModel})] Key #${keyNum}/${keys.length} gap HTTP ${response.status}. Thu lai lan ${keyRetryCount}/${maxRetriesPerKey} sau 3s...`);
+            await new Promise(r => setTimeout(r, 3000));
+            if (abortSignal && abortSignal.aborted) throw new Error('Dịch đã bị hủy');
+            continue;
+          } else {
+            console.warn(`[Gemini (${activeModel})] Key #${keyNum}/${keys.length} da thu lai du ${maxRetriesPerKey} lan (HTTP ${response.status}). Tien hanh chuyen key tiep theo...`);
+            switchKey = true;
+            break;
+          }
+        }
+
+        // Lỗi khác (400 cú pháp, v.v...)
+        break;
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (abortSignal) abortSignal.removeEventListener('abort', onAbort);
+        if (abortSignal && abortSignal.aborted) {
+          throw new Error('Dịch đã bị hủy');
+        }
+        keyRetryCount++;
+        if (keyRetryCount <= maxRetriesPerKey) {
+          console.warn(`[Gemini (${activeModel})] Loi ket noi Key #${keyNum}/${keys.length}: ${err.message}. Thu lai lan ${keyRetryCount}/${maxRetriesPerKey} sau 3s...`);
+          await new Promise(r => setTimeout(r, 3000));
+          if (abortSignal && abortSignal.aborted) throw new Error('Dịch đã bị hủy');
+          continue;
+        } else {
+          console.warn(`[Gemini (${activeModel})] Key #${keyNum}/${keys.length} loi ket noi sau ${maxRetriesPerKey} lan thu. Tien hanh chuyen key tiep theo...`);
+          switchKey = true;
+          break;
+        }
+      }
+    }
+
+    if (response && response.ok) {
+      break;
+    }
+
+    if (switchKey || !response || !response.ok) {
+      currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+      const nextKeyNum = (currentKeyIndex % keys.length) + 1;
+      if (triedKeyIndices.size < keys.length) {
+        console.warn(`[Gemini (${activeModel})] Doi sang Key #${nextKeyNum}/${keys.length}...`);
+        await new Promise(r => setTimeout(r, 300));
+        continue;
+      } else {
+        console.warn(`[Gemini (${activeModel})] Tat ca ${keys.length} API Key deu da thu du lan ma van that bai.`);
+        break;
+      }
+    }
+  }
+  
+  if (!response || !response.ok) {
+    const errorText = response ? await response.text() : 'No response from API';
+    let errorMsg = `Gemini API Error (${response ? response.status : 'Network'}): ${errorText.substring(0, 150)}`;
+    
+    if (response && response.status === 503) {
+      errorMsg = `[Gemini ${activeModel}] Lỗi 503: Model ${activeModel} đang bị quá tải trên máy chủ Google. Hãy chuyển sang model Gemini khác (như gemini-3.8-flash) hoặc thử lại sau giây lát.`;
+    } else if (response && (response.status === 429 || errorText.includes('RESOURCE_EXHAUSTED'))) {
+      errorMsg = `[Gemini ${activeModel}] Lỗi 429: Đã vượt quá giới hạn request (Rate Limit) trên toàn bộ ${keys.length} API Key cho model "${activeModel}".`;
+    } else if (errorText.includes('API_KEY_INVALID') || errorText.includes('API key not valid')) {
+      errorMsg = `[Gemini ${activeModel}] API Key không hợp lệ hoặc đã hết hạn trong Google AI Studio.`;
+    } else if (errorText.includes('models/') && (errorText.includes('not found') || (response && response.status === 404))) {
+      errorMsg = `Model "${activeModel}" không tồn tại hoặc không được hỗ trợ trên Google Gemini API.`;
+    } else if (errorText.includes('location is not supported')) {
+      errorMsg = 'Lỗi vị trí: Google chưa hỗ trợ Gemini tại quốc gia của bạn qua API trực tiếp. Hãy dùng Proxy hoặc đổi sang DeepSeek/Groq.';
+    }
+    throw new Error(errorMsg);
+  }
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  
+  // Extract response text from Interactions API (output_text / steps) or generateContent (candidates)
+  let responseText = data.output_text;
+  if (!responseText && data.candidates && data.candidates[0]?.content?.parts) {
+    responseText = data.candidates[0].content.parts.map(p => p.text || '').join('');
+  }
+  if (!responseText && data.steps && Array.isArray(data.steps)) {
+    const lastStep = data.steps.at(-1);
+    if (lastStep?.content && Array.isArray(lastStep.content)) {
+      responseText = lastStep.content.map(c => c.text || '').join('');
+    }
+  }
+
+  if (!responseText) {
+    const blockReason = data.promptFeedback?.blockReason;
+    const finishReason = data.candidates?.[0]?.finishReason;
+    const isBlocked = blockReason || finishReason === 'SAFETY' || finishReason === 'BLOCKLIST' || finishReason === 'PROHIBITED_CONTENT';
+
+    if (isBlocked) {
+      if (!_isEuphemismRetry) {
+        console.warn(`[Gemini (${activeModel})] Nội dung bị bộ lọc an toàn Google chặn (${blockReason || finishReason}). Tự động kích hoạt chuyển đổi uyển ngữ văn học (R18 Bypass) và thử lại...`);
+        const maskedText = EuphemismFilter.mask(text, sourceLang);
+        return translateGemini({
+          text: maskedText,
+          sourceLang,
+          targetLang,
+          customPrompt,
+          apiKey,
+          model: activeModel,
+          thinkingLevel,
+          safetySetting: 'BLOCK_NONE',
+          temperature,
+          glossary,
+          characterProfiles,
+          context,
+          apiEndpoint,
+          bookMemory,
+          abortSignal,
+          _isEuphemismRetry: true
+        });
+      }
+      throw new Error(`Nội dung bị chặn bởi chính sách an toàn của Google (${blockReason || finishReason}). Vui lòng chuyển sang DeepSeek hoặc bật dự phòng Google Dịch để dịch chương này.`);
+    }
+    throw new Error('Không nhận được phản hồi từ AI. Có thể do nội dung nhạy cảm hoặc lỗi hệ thống.');
+  }
+  
+  return ResponseCleaner.clean(responseText.trim());
+}
+
+module.exports = {
+  translate: translateGemini,
+};

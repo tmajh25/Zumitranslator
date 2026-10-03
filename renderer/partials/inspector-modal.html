@@ -1,0 +1,205 @@
+        <div class="modal hidden" id="bookInspectorModal">
+          <div class="modal-backdrop" id="bookInspectorBackdrop"></div>
+          <div class="modal-content book-inspector-content">
+            <div class="modal-header inspector-header">
+              <div class="inspector-title-area">
+                <span class="inspector-badge" id="inspectorExtBadge">EPUB</span>
+                <h2 id="inspectorTitle" title="Chi tiết sách">Chi tiết sách</h2>
+              </div>
+              <button class="modal-close" id="closeBookInspectorBtn" title="Đóng (Esc)">&times;</button>
+            </div>
+            
+            <div class="inspector-tabs">
+              <button class="inspector-tab active" data-tab="overview">
+                <span>Tổng quan</span>
+              </button>
+              <button class="inspector-tab" data-tab="metadata">
+                <span>Metadata</span>
+              </button>
+              <button class="inspector-tab" data-tab="toc">
+                <span>Mục lục (<span id="inspectorTocCount">0</span>)</span>
+              </button>
+            </div>
+
+            <div class="modal-body inspector-body">
+              <!-- Tab 1: Overview -->
+              <div class="inspector-tab-panel active" id="inspectorTabOverview">
+                <div class="inspector-overview-layout">
+                  <div class="inspector-cover-col">
+                    <div class="inspector-cover-box" id="inspectorCoverBox">
+                      <!-- Cover image or fallback -->
+                    </div>
+                    <div class="inspector-cover-actions">
+                      <button class="btn btn-secondary btn-sm" id="changeCoverBtn" title="Chọn file ảnh mới cho sách">
+                        <span>Đổi bìa</span>
+                      </button>
+                      <button class="btn btn-danger-ghost btn-sm" id="removeCoverBtn" title="Gỡ ảnh bìa hiện tại">
+                        <span>Xóa bìa</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="inspector-overview-details">
+                    <div class="inspector-header-info">
+                      <h3 id="inspectorBookTitle" class="inspector-book-title">Tên truyện</h3>
+                      <p class="inspector-author">
+                        Tác giả: <strong id="inspectorBookAuthor">Chưa rõ</strong>
+                      </p>
+                    </div>
+                    
+                    <!-- Minimal Definition List / Properties Table -->
+                    <div class="inspector-props-list">
+                      <div class="prop-row">
+                        <span class="prop-label">Định dạng</span>
+                        <span class="prop-value" id="inspectorBookFormat">.epub</span>
+                      </div>
+                      <div class="prop-row">
+                        <span class="prop-label">Dung lượng</span>
+                        <span class="prop-value" id="inspectorBookSize">0 KB</span>
+                      </div>
+                      <div class="prop-row">
+                        <span class="prop-label">Quy mô</span>
+                        <span class="prop-value"><strong id="inspectorBookChapters">0</strong> chương · <strong id="inspectorBookChars">0</strong> từ</span>
+                      </div>
+                      <div class="prop-row">
+                        <span class="prop-label">Đọc gần nhất</span>
+                        <span class="prop-value" id="inspectorLastAccessed">-</span>
+                      </div>
+                      <div class="prop-row prop-row-path">
+                        <span class="prop-label">Tập tin</span>
+                        <div class="prop-value-path">
+                          <span class="inspector-filepath" id="inspectorFilePath" title="">-</span>
+                          <button class="btn btn-secondary btn-sm" id="inspectorCopyPathBtn" style="padding: 2px 7px; font-size: 11px;">Sao chép</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Languages Breakdown (GitHub Style) -->
+                    <div class="inspector-section-block">
+                      <div class="section-block-label">Ngôn ngữ trong truyện</div>
+                      <div id="inspectorMultiLangContainer">
+                        <div class="github-languages-bar">
+                          <div class="github-languages-segment" id="inspectorProgressBar" style="width: 0%; background: #22c55e"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="inspector-section-block">
+                      <div class="section-block-label">Giới thiệu nội dung</div>
+                      <div class="inspector-desc-scroll">
+                        <p id="inspectorBookDesc">Chưa có mô tả tóm tắt cho cuốn sách này.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 2: Metadata -->
+              <div class="inspector-tab-panel hidden" id="inspectorTabMetadata">
+                <div class="inspector-form">
+                  <div class="form-group form-group-full">
+                    <label for="editMetaTitle">Tiêu đề sách:</label>
+                    <input type="text" id="editMetaTitle" class="form-input" placeholder="Nhập tên sách..." />
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="editMetaAuthor">Tác giả / Creator:</label>
+                      <input type="text" id="editMetaAuthor" class="form-input" placeholder="Tên tác giả..." />
+                    </div>
+                    <div class="form-group">
+                      <label for="editMetaPublisher">Nhà xuất bản:</label>
+                      <input type="text" id="editMetaPublisher" class="form-input" placeholder="Nhà xuất bản (nếu có)..." />
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="editMetaLanguage">Mã ngôn ngữ:</label>
+                      <input type="text" id="editMetaLanguage" class="form-input" placeholder="vi, zh, en..." />
+                    </div>
+                    <div class="form-group">
+                      <label for="editMetaSubjects">Thể loại / Tags:</label>
+                      <input type="text" id="editMetaSubjects" class="form-input" placeholder="Tiên hiệp, Huyền huyễn, Dị giới..." />
+                    </div>
+                  </div>
+
+                  <div class="form-group form-group-full">
+                    <label for="editMetaDescription">Mô tả / Tóm tắt truyện:</label>
+                    <textarea id="editMetaDescription" class="form-input form-textarea" rows="4" placeholder="Nhập tóm tắt hoặc nội dung giới thiệu truyện..."></textarea>
+                  </div>
+
+                  <div class="inspector-form-footer">
+                    <div class="inspector-form-tip">
+                      <span>Lưu vào Tủ sách hoặc ghi đè trực tiếp vào file .epub gốc.</span>
+                    </div>
+                    <div class="inspector-form-actions">
+                      <button class="btn btn-secondary" id="saveMetaDbBtn">
+                        <span>Lưu vào Tủ sách</span>
+                      </button>
+                      <button class="btn btn-primary" id="saveMetaChangesBtn">
+                        <span>Ghi đè vào File EPUB</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 3: Table of Contents (Split View) -->
+              <div class="inspector-tab-panel hidden" id="inspectorTabToc">
+                <div class="inspector-toc-split">
+                  <div class="inspector-toc-left">
+                    <div class="inspector-toc-search-box">
+                      <input type="text" id="inspectorTocSearch" placeholder="Tìm kiếm chương..." />
+                      <button id="inspectorTocSearchClear" class="toc-search-clear hidden" title="Xóa tìm kiếm">&times;</button>
+                    </div>
+                    <div class="inspector-toc-list" id="inspectorTocList">
+                      <!-- Chapter items will be rendered here -->
+                    </div>
+                  </div>
+                  
+                  <div class="inspector-toc-preview" id="inspectorTocPreview">
+                    <div class="inspector-toc-empty" id="inspectorTocEmpty">
+                      <p>Chọn một chương bên trái để xem nội dung</p>
+                    </div>
+                    <div class="inspector-toc-content hidden" id="inspectorTocContent">
+                      <div class="inspector-toc-header">
+                        <div class="inspector-toc-title-area">
+                          <h4 id="inspectorTocTitle"></h4>
+                          <span id="inspectorTocCharCount" class="toc-chars"></span>
+                        </div>
+                        <button class="btn btn-sm btn-primary" id="inspectorReadChapterBtn" title="Mở chương này trong không gian dịch / đọc">
+                          <span>Mở chương này</span>
+                        </button>
+                      </div>
+                      <div class="inspector-toc-body" id="inspectorTocBody"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer inspector-footer">
+              <div class="inspector-footer-left">
+                <button class="btn btn-danger-ghost" id="inspectorDeleteBtn" title="Xóa khỏi tủ sách">
+                  <span>Xóa</span>
+                </button>
+                <button class="btn btn-secondary" id="inspectorOpenFolderBtn" title="Mở vị trí file trên máy">
+                  <span>Mở thư mục</span>
+                </button>
+                <button class="btn btn-secondary" id="inspectorOptimizeBtn" title="Tối ưu EPUB: Quét & xóa ảnh rác/mồ côi, nén lại dung lượng">
+                  <span>⚡ Tối ưu EPUB</span>
+                </button>
+              </div>
+              <div class="inspector-footer-right">
+                <button class="btn btn-secondary hidden" id="inspectorExportBtn" title="Xuất bản dịch đã hoàn thành ra file">
+                  <span>Xuất bản dịch</span>
+                </button>
+                <button class="btn btn-primary" id="inspectorContinueBtn">
+                  <span>Mở dịch / Đọc truyện</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>

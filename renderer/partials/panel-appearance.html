@@ -1,0 +1,204 @@
+      <div class="panel" id="panel-appearance">
+        <div class="panel-header">
+          <h1>Cài đặt giao diện</h1>
+          <p class="panel-subtitle">Tùy chỉnh chủ đề sáng/tối, màu sắc, phông chữ và độ bo góc giao diện</p>
+        </div>
+
+        <div class="settings-content">
+          <!-- Settings Navigation Tabs -->
+          <div class="settings-nav-tabs">
+            <button class="settings-tab-btn" data-subtab="ai">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+                <rect width="18" height="12" x="3" y="8" rx="2"/>
+                <path d="M9 13v2"/>
+                <path d="M15 13v2"/>
+                <path d="M2 14h1"/>
+                <path d="M21 14h1"/>
+              </svg>
+              <span>Cấu hình AI</span>
+            </button>
+            <button class="settings-tab-btn" data-subtab="translation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m5 8 6 6"/>
+                <path d="m4 14 6-6 2-3"/>
+                <path d="M2 5h12"/>
+                <path d="M7 2h1"/>
+                <path d="m22 22-5-10-5 10"/>
+                <path d="M14 18h6"/>
+              </svg>
+              <span>Cấu hình dịch</span>
+            </button>
+            <button class="settings-tab-btn active" data-target-panel="appearance">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+              </svg>
+              <span>Cài đặt giao diện</span>
+            </button>
+          </div>
+
+          <!-- Card 1: Theme Mode -->
+          <div class="setting-card">
+            <h3>Chế độ màu hiển thị (Theme)</h3>
+            <p class="option-hint" style="margin-bottom: 14px;">Chọn chủ đề màu sắc phù hợp với mắt nhìn hoặc đọc truyện ban đêm.</p>
+            <div class="theme-picker-grid">
+              <label class="theme-option-card active" data-theme="light">
+                <input type="radio" name="uiTheme" value="light" checked>
+                <div class="theme-preview-box theme-preview-light">
+                  <div class="tp-sidebar"></div>
+                  <div class="tp-content">
+                    <div class="tp-bar"></div>
+                    <div class="tp-card"></div>
+                  </div>
+                </div>
+                <span class="theme-title">Giao diện Sáng</span>
+                <span class="theme-desc">Tươi sáng, thanh thoát</span>
+              </label>
+
+              <label class="theme-option-card" data-theme="dark">
+                <input type="radio" name="uiTheme" value="dark">
+                <div class="theme-preview-box theme-preview-dark">
+                  <div class="tp-sidebar"></div>
+                  <div class="tp-content">
+                    <div class="tp-bar"></div>
+                    <div class="tp-card"></div>
+                  </div>
+                </div>
+                <span class="theme-title">Giao diện Tối (Dark)</span>
+                <span class="theme-desc">Dịu mắt, đọc truyện đêm</span>
+              </label>
+
+              <label class="theme-option-card" data-theme="system">
+                <input type="radio" name="uiTheme" value="system">
+                <div class="theme-preview-box theme-preview-system">
+                  <div class="tp-half-light"></div>
+                  <div class="tp-half-dark"></div>
+                </div>
+                <span class="theme-title">Theo hệ thống</span>
+                <span class="theme-desc">Tự động theo Windows OS</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Card 2: Accent Color -->
+          <div class="setting-card">
+            <h3>Màu sắc chủ đạo (Accent Color)</h3>
+            <p class="option-hint" style="margin-bottom: 14px;">Tông màu nhấn cho các nút bấm, biểu tượng và viền thao tác.</p>
+            <div class="accent-color-grid">
+              <button type="button" class="accent-color-btn active" data-color="indigo" style="--c: #6366f1" title="Xanh Chàm (Mặc định)">
+                <span class="accent-dot"></span>
+                <span class="accent-label">Xanh Chàm</span>
+              </button>
+              <button type="button" class="accent-color-btn" data-color="blue" style="--c: #0284c7" title="Xanh Biển">
+                <span class="accent-dot"></span>
+                <span class="accent-label">Xanh Biển</span>
+              </button>
+              <button type="button" class="accent-color-btn" data-color="purple" style="--c: #8b5cf6" title="Tím Hiện Đại">
+                <span class="accent-dot"></span>
+                <span class="accent-label">Tím Hiện Đại</span>
+              </button>
+              <button type="button" class="accent-color-btn" data-color="emerald" style="--c: #10b981" title="Xanh Ngọc Bích">
+                <span class="accent-dot"></span>
+                <span class="accent-label">Ngọc Bích</span>
+              </button>
+              <button type="button" class="accent-color-btn" data-color="amber" style="--c: #f59e0b" title="Cam Hổ Phách">
+                <span class="accent-dot"></span>
+                <span class="accent-label">Hổ Phách</span>
+              </button>
+              <button type="button" class="accent-color-btn" data-color="rose" style="--c: #f43f5e" title="Hồng Ruby">
+                <span class="accent-dot"></span>
+                <span class="accent-label">Hồng Ruby</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 3: Font & Font Size -->
+          <div class="setting-card">
+            <h3>Phông chữ & Cỡ chữ đọc bản dịch</h3>
+            <div class="settings-lang-grid" style="margin-top: 12px;">
+              <div class="input-group-vertical">
+                <label class="setting-label-small">Phông chữ hiển thị</label>
+                <select id="uiFontSelect" class="setting-input">
+                  <option value="system" selected>Inter (Mặc định)</option>
+                  <option value="bevietnam">Be Vietnam Pro (Tiếng Việt thanh thoát)</option>
+                  <option value="serif">Merriweather (Văn học cổ điển)</option>
+                  <option value="mono">Fira Code (Monospace)</option>
+                </select>
+                <span class="option-hint">Áp dụng cho nội dung đọc và xem trước bản dịch</span>
+              </div>
+              <div class="input-group-vertical">
+                <label class="setting-label-small">Cỡ chữ đọc truyện / dịch</label>
+                <select id="uiFontSizeSelect" class="setting-input">
+                  <option value="small">Nhỏ gọn (13px)</option>
+                  <option value="medium" selected>Tiêu chuẩn (14px)</option>
+                  <option value="large">Lớn dễ đọc (16px)</option>
+                  <option value="xlarge">Rất lớn (18px)</option>
+                </select>
+                <span class="option-hint">Tăng cỡ chữ để đọc lâu không mỏi mắt</span>
+              </div>
+            </div>
+
+            <!-- Font preview sample -->
+            <div class="font-preview-box">
+              <div class="font-preview-title" id="fontPreviewDesc">Đang dùng: Inter (Hệ thống) • Cỡ chữ: Tiêu chuẩn (14px)</div>
+              <div class="font-preview-sample" id="fontPreviewSample">
+                "Đêm qua gió mưa rả rích, sáng nay hoa rụng đầy sân. Từng con chữ chuyển mình mượt mà qua các trang dịch thuật."
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Bo góc nút & khung -->
+          <div class="setting-card">
+            <h3>Kiểu dáng bo góc nút bấm & Khung giao diện</h3>
+            <p class="option-hint" style="margin-bottom: 14px;">Điều chỉnh độ cong các nút bấm và khung làm việc theo sở thích thẩm mỹ của bạn.</p>
+            <div class="radius-picker-grid">
+              <label class="radius-option-card" data-radius="flat">
+                <input type="radio" name="uiRadius" value="flat">
+                <div class="radius-preview" style="border-radius: 0px;"><span>0px</span></div>
+                <span class="radius-title">Vuông phẳng (Flat)</span>
+              </label>
+              <label class="radius-option-card active" data-radius="subtle">
+                <input type="radio" name="uiRadius" value="subtle" checked>
+                <div class="radius-preview" style="border-radius: 4px;"><span>4px</span></div>
+                <span class="radius-title">Vuông nhẹ (Ưa thích)</span>
+              </label>
+              <label class="radius-option-card" data-radius="medium">
+                <input type="radio" name="uiRadius" value="medium">
+                <div class="radius-preview" style="border-radius: 8px;"><span>8px</span></div>
+                <span class="radius-title">Bo tròn vừa</span>
+              </label>
+              <label class="radius-option-card" data-radius="round">
+                <input type="radio" name="uiRadius" value="round">
+                <div class="radius-preview" style="border-radius: 14px;"><span>14px</span></div>
+                <span class="radius-title">Bo mềm mại</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Card 5: Extra Options -->
+          <div class="setting-card">
+            <h3>Tùy chọn bổ sung</h3>
+            <div class="setting-item-row" style="margin-top: 8px;">
+              <div class="checkbox-wrapper">
+                <input type="checkbox" id="uiReduceMotion">
+                <label for="uiReduceMotion">Giảm hiệu ứng chuyển động (Tăng tốc độ hiển thị)</label>
+              </div>
+              <span class="option-hint">Tắt các hoạt ảnh chuyển trang để thao tác tức thì</span>
+            </div>
+            <div class="setting-item-row" style="margin-top: 14px;">
+              <div class="checkbox-wrapper">
+                <input type="checkbox" id="uiCompactMode">
+                <label for="uiCompactMode">Chế độ hiển thị thu gọn (Compact layout)</label>
+              </div>
+              <span class="option-hint">Giảm khoảng cách đệm để hiển thị nhiều thông tin hơn trên màn hình</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-container" id="toastContainer"></div>

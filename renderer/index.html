@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZumiTranslator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/translate.css">
+  <link rel="stylesheet" href="css/bookshelf.css">
+  <link rel="stylesheet" href="css/inspector.css">
+  <link rel="stylesheet" href="css/workspace.css">
+  <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/appearance.css">
+</head>
+<body>
+  <!-- Drag region for titlebar -->
+  <div class="titlebar-drag-region"></div>
+
+  <div class="app-container">
+
+    <!-- Sidebar Navigation -->
+    <div data-partial="sidebar.html"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Translate Panel -->
+      <div data-partial="panel-translate.html"></div>
+
+      <!-- File Translation Panel / Bookshelf & Workspace -->
+      <div data-partial="panel-file.html"></div>
+
+      <!-- Settings Panel -->
+      <div data-partial="panel-settings.html"></div>
+
+      <!-- Appearance Panel -->
+      <div data-partial="panel-appearance.html"></div>
+    </main>
+
+    <!-- Modals -->
+    <div data-partial="modals.html"></div>
+  </div>
+
+  <!-- Synchronously expand all modular HTML partials before application scripts initialize -->
+  <script>
+    (function loadPartials() {
+      let maxIterations = 20;
+      while (document.querySelector('[data-partial]') && maxIterations-- > 0) {
+        const el = document.querySelector('[data-partial]');
+        const file = el.getAttribute('data-partial');
+        if (window.electronAPI && typeof window.electronAPI.getPartial === 'function') {
+          const html = window.electronAPI.getPartial(file);
+          el.outerHTML = html || `<!-- Missing partial: ${file} -->`;
+        } else {
+          console.error('window.electronAPI.getPartial not available');
+          break;
+        }
+      }
+    })();
+  </script>
+
+  <!-- Core Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/ui.js"></script>
+  
+  <!-- AI Provider Integrations -->
+  <script src="js/ai/gemini.js"></script>
+  <script src="js/ai/openai.js"></script>
+  <script src="js/ai/deepseek.js"></script>
+  <script src="js/ai/groq.js"></script>
+  <script src="js/ai/cerebras.js"></script>
+  <script src="js/ai/openrouter.js"></script>
+  <script src="js/ai/googleFree.js"></script>
+  <script src="js/ai/deepl.js"></script>
+  <script src="js/ai/custom.js"></script>
+  <script src="js/ai/index.js"></script>
+  <script src="js/aiConfig.js"></script>
+  
+  <!-- State & App Modules -->
+  <script src="js/eventBus.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/keyPool.js"></script>
+  <script src="js/settings/fallbackChainUI.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/appearance.js"></script>
+  <script src="js/foreignDetector.js"></script>
+  <script src="js/r18Detector.js"></script>
+  <script src="js/progressDetector.js"></script>
+  <script src="js/progressReportModal.js"></script>
+  <script src="js/workspace/workspaceSidebar.js"></script>
+  <script src="js/workspace/workspaceEditor.js"></script>
+  <script src="js/chapterWorkspace.js"></script>
+  <script src="js/chapterParser.js"></script>
+  <script src="js/inspector.js"></script>
+  <script src="js/bookshelf.js"></script>
+  <script src="js/glossary/glossaryScanner.js"></script>
+  <script src="js/bookGlossary.js"></script>
+  <script src="js/character/characterData.js"></script>
+  <script src="js/character/characterScanner.js"></script>
+  <script src="js/characterProfile.js"></script>
+  <script src="js/workflow.js"></script>
+  <script src="js/translation/translationContext.js"></script>
+  <script src="js/translation/translationPostProcess.js"></script>
+  <script src="js/translation.js"></script>
+  
+  <!-- Controller Modules -->
+  <script src="js/controllers/navigationController.js"></script>
+  <script src="js/controllers/textController.js"></script>
+  <script src="js/controllers/bookshelfController.js"></script>
+  <script src="js/controllers/fileController.js"></script>
+  <script src="js/controllers/settingsController.js"></script>
+  <script src="js/controllers/modalController.js"></script>
+  
+  <!-- Main Renderer Entry -->
+  <script src="renderer.js"></script>
+</body>
+</html>

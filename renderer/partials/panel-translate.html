@@ -1,0 +1,60 @@
+      <div class="panel active" id="panel-translate">
+        <div class="panel-header">
+          <h1>Dịch văn bản</h1>
+          <p class="panel-subtitle">Nhập hoặc dán văn bản cần dịch</p>
+        </div>
+
+        <div class="translate-area">
+          <div class="text-box source-box">
+            <div class="text-box-header">
+              <div class="lang-prompt-container">
+                <span class="prompt-status-label" id="textProviderLabel">Google Translate</span>
+                <button type="button" class="btn btn-secondary btn-sm prompt-quick-btn hidden" id="textQuickPromptBtn" title="Xem & Chỉnh sửa Prompt cho AI">
+                  <span>Prompt AI</span>
+                </button>
+              </div>
+              <div class="text-actions">
+                <span class="char-count" id="sourceCharCount">0 từ</span>
+                <button class="btn btn-secondary btn-sm" id="clearSource" title="Xóa">Xóa</button>
+                <button class="btn btn-secondary btn-sm" id="pasteSource" title="Dán">Dán</button>
+              </div>
+            </div>
+
+            <!-- Inline Quick Prompt Drawer -->
+            <div class="inline-prompt-bar hidden" id="textInlinePromptBar">
+              <div class="inline-prompt-header">
+                <span class="inline-prompt-title">Lệnh dịch thuật AI (System Prompt):</span>
+                <div class="inline-prompt-actions">
+                  <button type="button" class="text-link" id="textPromptResetBtn" style="font-size: 11.5px;">Khôi phục mặc định</button>
+                  <button type="button" class="icon-btn-sm" id="closeTextPromptBtn" title="Đóng thanh prompt">✕</button>
+                </div>
+              </div>
+              <textarea id="textInlinePromptInput" class="setting-input inline-prompt-textarea" rows="2" placeholder="Nhập prompt dịch thuật..."></textarea>
+            </div>
+            <textarea id="sourceText" placeholder="Nhập văn bản cần dịch tại đây..." spellcheck="false"></textarea>
+          </div>
+
+          <div class="translate-middle">
+            <button class="swap-btn-circle" id="swapLangsText" title="Hoán đổi ngôn ngữ">⇄</button>
+          </div>
+
+          <div class="text-box target-box">
+            <div class="text-box-header">
+              <div class="lang-prompt-container">
+                <span class="prompt-status-label">Bản dịch</span>
+              </div>
+              <div class="text-actions">
+                <span class="char-count" id="targetCharCount">0 từ</span>
+                <button class="btn btn-secondary btn-sm" id="copyTarget" title="Sao chép">Sao chép</button>
+              </div>
+            </div>
+            <textarea id="targetText" placeholder="Bản dịch sẽ hiển thị ở đây..." readonly spellcheck="false"></textarea>
+          </div>
+        </div>
+
+        <div class="translate-actions">
+          <button class="btn btn-primary btn-translate" id="translateTextBtn">
+            <span>Dịch ngay</span>
+          </button>
+        </div>
+      </div>

@@ -1,0 +1,236 @@
+          <div class="settings-tab-pane active" id="settingsPaneAI">
+            <!-- API Provider Selection -->
+            <div class="setting-card">
+              <h3>Nhà cung cấp API</h3>
+              <div class="api-provider-grid">
+                <label class="provider-card" data-provider="openai">
+                  <input type="radio" name="apiProvider" value="openai">
+                  <div class="provider-icon">
+                    <img src="../assets/logos/openai.svg" alt="OpenAI">
+                  </div>
+                  <span class="provider-name">OpenAI</span>
+                </label>
+
+                <label class="provider-card" data-provider="gemini">
+                  <input type="radio" name="apiProvider" value="gemini">
+                  <div class="provider-icon">
+                    <img src="../assets/logos/gemini.svg" alt="Gemini">
+                  </div>
+                  <span class="provider-name">Google Gemini</span>
+                </label>
+
+                <label class="provider-card" data-provider="groq">
+                  <input type="radio" name="apiProvider" value="groq">
+                  <div class="provider-icon">
+                    <img src="../assets/logos/groq.svg" alt="Groq">
+                  </div>
+                  <span class="provider-name">Groq Cloud</span>
+                </label>
+
+                <label class="provider-card" data-provider="deepseek">
+                  <input type="radio" name="apiProvider" value="deepseek">
+                  <div class="provider-icon">
+                    <img src="../assets/logos/deepseek.svg" alt="DeepSeek">
+                  </div>
+                  <span class="provider-name">DeepSeek</span>
+                </label>
+
+                <label class="provider-card" data-provider="openrouter">
+                  <input type="radio" name="apiProvider" value="openrouter">
+                  <div class="provider-icon">
+                    <img src="../assets/logos/openrouter.svg" alt="OpenRouter">
+                  </div>
+                  <span class="provider-name">OpenRouter</span>
+                </label>
+
+                <label class="provider-card" data-provider="cerebras">
+                  <input type="radio" name="apiProvider" value="cerebras">
+                  <div class="provider-icon">
+                    <img src="../assets/logos/cerebras.svg" alt="Cerebras">
+                  </div>
+                  <span class="provider-name">Cerebras</span>
+                </label>
+
+                <label class="provider-card" data-provider="google-free">
+                  <input type="radio" name="apiProvider" value="google-free" checked>
+                  <div class="provider-icon">
+                    <img src="../assets/logos/google.svg" alt="Google">
+                  </div>
+                  <span class="provider-name">Google Translate</span>
+                </label>
+                
+                <label class="provider-card" data-provider="deepl">
+                  <input type="radio" name="apiProvider" value="deepl">
+                  <div class="provider-icon">
+                    <img src="../assets/logos/deepl.svg" alt="DeepL">
+                  </div>
+                  <span class="provider-name">DeepL</span>
+                </label>
+
+                <label class="provider-card" data-provider="custom">
+                  <input type="radio" name="apiProvider" value="custom">
+                  <div class="provider-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                  </div>
+                  <span class="provider-name">Custom API</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- API Key Section (Key Pool with Add Key) -->
+            <div class="setting-card hidden" id="apiKeySection">
+              <div class="setting-card-header">
+                <div class="setting-title-wrap">
+                  <h3>Danh sách API Key</h3>
+                  <span class="key-count-badge" id="keyCountBadge">0 key</span>
+                </div>
+              </div>
+
+              <!-- Add Key Form -->
+              <div class="add-key-form">
+                <div class="add-key-input-row">
+                  <input type="password" id="newApiKeyInput" class="setting-input" placeholder="Dán API Key vào đây (có thể dán nhiều key)..." autocomplete="off">
+                  <button class="btn btn-primary" id="addKeyBtn">
+                    + Thêm Key
+                  </button>
+                </div>
+              </div>
+
+              <!-- Hidden input for backward compatibility with existing listeners if any -->
+              <input type="hidden" id="apiKeyInput" value="">
+
+              <!-- List of Keys in Pool -->
+              <div class="key-pool-list" id="keyPoolList">
+                <!-- Rendered dynamically -->
+              </div>
+
+
+            </div>
+
+            <!-- Model Section (for AI providers) -->
+            <div class="setting-card hidden" id="modelSection">
+              <div class="setting-card-header">
+                <div class="setting-title-wrap">
+                  <h3>Chọn Model AI</h3>
+                  <span class="badge badge-ai" id="modelProviderBadge">AI Model</span>
+                </div>
+              </div>
+              <select id="modelSelect" class="setting-input">
+                <option value="">-- Click chọn model --</option>
+              </select>
+              <div id="customModelInputRow" class="setting-item-row hidden" style="margin-top: 8px;">
+                <label for="customModelInput" style="font-size: 13px;">Mã Model tùy chỉnh:</label>
+                <input type="text" id="customModelInput" class="setting-input" placeholder="Ví dụ: qwen2.5:32b, gemma2:9b, my-model...">
+              </div>
+            </div>
+
+
+            <!-- Custom API Endpoint Section -->
+            <div class="setting-card hidden" id="customEndpointSection">
+              <div class="setting-card-header">
+                <div class="setting-title-wrap">
+                  <h3>Địa chỉ API (Custom Endpoint)</h3>
+                  <span class="badge badge-ai" id="endpointProviderBadge">Endpoint</span>
+                </div>
+              </div>
+              <div class="setting-item-row" style="margin-top: 8px;">
+                <label for="customEndpoint">Base URL:</label>
+                <input type="text" id="customEndpoint" class="setting-input" placeholder="http://localhost:11434/v1">
+              </div>
+            </div>
+
+
+            <!-- Custom Translation Prompt (AI System Prompt) -->
+            <div class="setting-card hidden" id="customPromptSection">
+              <div class="setting-card-header">
+                <div class="setting-title-wrap">
+                  <h3>Lệnh dịch thuật (Prompt)</h3>
+                  <span class="badge badge-ai" id="promptProviderBadge">AI Prompt</span>
+                </div>
+                <div class="setting-header-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" id="resetPromptBtn" title="Khôi phục lại prompt mặc định của AI này">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    <span>Mặc định</span>
+                  </button>
+                </div>
+              </div>
+              <textarea id="customPromptInput" class="setting-input prompt-textarea" rows="4" placeholder="Nhập lệnh dịch thuật (Prompt)..."></textarea>
+              <div class="prompt-footer-row" style="justify-content: flex-end;">
+                <span class="prompt-char-count" id="promptCharCount">0 từ</span>
+              </div>
+            </div>
+
+            <!-- OpenAI Reasoning Effort & Mode -->
+            <div class="setting-card hidden" id="openaiReasoningSection">
+              <div class="card-title-row">
+                <h3>Reasoning Effort (Độ sâu suy luận)</h3>
+                <span class="badge badge-ai">OpenAI</span>
+              </div>
+              
+              <div class="setting-item-row" style="margin-top: 8px;">
+                <label for="reasoningEffortSelect">Mức độ suy luận (reasoning.effort):</label>
+                <select id="reasoningEffortSelect" class="setting-input">
+                  <option value="none" id="reasoningEffortNoneOpt">none (Không suy luận)</option>
+                  <option value="minimal">minimal (Tối thiểu)</option>
+                  <option value="low">low (Thấp)</option>
+                  <option value="medium" selected>medium (Cân bằng - Mặc định)</option>
+                  <option value="high">high (Cao)</option>
+                  <option value="xhigh">xhigh (Rất cao)</option>
+                  <option value="max">max (Tối đa)</option>
+                </select>
+              </div>
+
+              <!-- Reasoning Mode for GPT-5.6 -->
+              <div class="setting-item-row" id="reasoningModeRow" style="margin-top: 12px;">
+                <label for="reasoningModeSelect">Chế độ suy luận (reasoning.mode):</label>
+                <select id="reasoningModeSelect" class="setting-input">
+                  <option value="standard" selected>standard (Tiêu chuẩn)</option>
+                  <option value="pro">pro (Pro Mode)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Thinking Level (for Google Gemini, DeepSeek & other providers) -->
+            <div class="setting-card hidden" id="thinkingLevelSection">
+              <div class="card-title-row">
+                <h3 id="thinkingLevelTitle">Thinking Level (Mức độ suy luận)</h3>
+                <span class="badge badge-ai" id="thinkingLevelBadge">Gemini</span>
+              </div>
+              <div class="setting-item-row" style="margin-top: 8px;">
+                <label for="thinkingLevelSelect" id="thinkingLevelLabel">Mức độ tư duy:</label>
+                <select id="thinkingLevelSelect" class="setting-input">
+                  <option value="minimal">minimal (Tối thiểu)</option>
+                  <option value="low">low (Thấp)</option>
+                  <option value="medium" selected>medium (Cân bằng - Mặc định)</option>
+                  <option value="high">high (Cao)</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Temperature (for AI providers) -->
+            <div class="setting-card hidden" id="temperatureSection">
+              <h3>Temperature (Độ sáng tạo)</h3>
+              <div class="range-group">
+                <input type="range" id="temperatureInput" min="0" max="2" step="0.1" value="1.0" class="setting-range">
+                <span class="range-value" id="temperatureValue">1.0</span>
+              </div>
+            </div>
+
+            <!-- Safety Settings (Gemini only) -->
+            <div class="setting-card hidden" id="safetySettingSection">
+              <h3>Safety Settings (Bộ lọc an toàn)</h3>
+              <select id="safetySettingSelect" class="setting-input">
+                <option value="BLOCK_NONE">BLOCK_NONE (Tắt bộ lọc)</option>
+                <option value="BLOCK_ONLY_HIGH">BLOCK_ONLY_HIGH (Chặn mức cao)</option>
+                <option value="BLOCK_MEDIUM_AND_ABOVE" selected>BLOCK_MEDIUM_AND_ABOVE (Chặn trung bình)</option>
+                <option value="BLOCK_LOW_AND_ABOVE">BLOCK_LOW_AND_ABOVE (Chặn nghiêm ngặt)</option>
+                <option value="HARM_BLOCK_THRESHOLD_UNSPECIFIED">Mặc định hệ thống</option>
+              </select>
+            </div>
+
+
+          </div>
+
+          <!-- TAB PANE 2: CẤU HÌNH DỊCH -->

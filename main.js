@@ -1,0 +1,201 @@
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const fs = require('fs');
+const fileService = require('./services/file/fileService');
+const { translatorRegistry } = require('./services/translators');
+
+let mainWindow;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    icon: path.join(__dirname, 'assets', 'logo.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#09090b',
+      symbolColor: '#fafafa',
+      height: 40
+    },
+    backgroundColor: '#09090b',
+    show: false,
+  });
+
+  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+    if (input.key === 'F5' || (input.control && input.key.toLowerCase() === 'r')) {
+      mainWindow.webContents.reload();
+      event.preventDefault();
+    }
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  app.whenReady().then(createWindow);
+}
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+    process.exit(0);
+  }
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// ============ FILE IPC HANDLERS ============
+
+ipcMain.handle('open-file', async () => {
+  return await fileService.handleOpenFile(mainWindow);
+});
+
+ipcMain.handle('open-file-by-path', async (event, filePath) => {
+  return await fileService.handleOpenFileByPath(filePath);
+});
+
+ipcMain.handle('save-file', async (event, params) => {
+  return await fileService.handleSaveFile(mainWindow, params);
+});
+
+ipcMain.handle('save-multi-txt', async (event, params) => {
+  return await fileService.handleSaveMultiTxt(mainWindow, params);
+});
+
+ipcMain.handle('update-epub-metadata', async (event, data) => {
+  return await fileService.handleUpdateEpubMetadata(data);
+});
+
+ipcMain.handle('select-cover-image', async () => {
+  return await fileService.handleSelectCoverImage(mainWindow);
+});
+
+ipcMain.on('open-folder', (event, filePath) => {
+  fileService.openFolder(filePath);
+});
+
+// ============ TRANSLATION IPC HANDLER ============
+
+const activeTranslationControllers = new Set();
+
+ipcMain.on('cancel-translation', () => {
+  for (const controller of activeTranslationControllers) {
+    try {
+      controller.abort();
+    } catch (_) {}
+  }
+  activeTranslationControllers.clear();
+});
+
+ipcMain.handle('translate-text', async (event, params) => {
+  const controller = new AbortController();
+  activeTranslationControllers.add(controller);
+  try {
+    const text = await translatorRegistry.translate({
+      ...params,
+      abortSignal: controller.signal
+    });
+    return { success: true, text };
+  } catch (err) {
+    return { success: false, error: err.message || String(err) };
+  } finally {
+    activeTranslationControllers.delete(controller);
+  }
+});
+
+ipcMain.handle('optimize-epub', async (event, filePath, options) => {
+  return await fileService.handleOptimizeEpub(filePath, options);
+});
+
+// ============ PARTIALS IPC HANDLER ============
+ipcMain.on('get-partial-sync', (event, name) => {
+  try {
+    const p = path.join(__dirname, 'renderer', 'partials', name);
+    if (fs.existsSync(p)) {
+      event.returnValue = fs.readFileSync(p, 'utf8');
+      return;
+    }
+    console.warn('Partial not found:', p);
+  } catch (err) {
+    console.error('Error reading partial:', name, err);
+  }
+  event.returnValue = '';
+});
+
+// ============ TITLEBAR OVERLAY IPC HANDLER ============
+ipcMain.on('set-titlebar-overlay', (event, options) => {
+  if (mainWindow && typeof mainWindow.setTitleBarOverlay === 'function') {
+    try {
+      mainWindow.setTitleBarOverlay(options);
+    } catch (err) {
+      console.warn('Failed to set title bar overlay:', err);
+    }
+  }
+});
+
+// ============ PERSISTENT BOOK DATA STORAGE ============
+const getBooksDataFilePath = () => path.join(app.getPath('userData'), 'zumi_books.json');
+
+ipcMain.handle('save-books-to-disk', async (event, books) => {
+  try {
+    const filePath = getBooksDataFilePath();
+    const tempPath = `${filePath}.tmp_${Date.now()}`;
+    const data = JSON.stringify(books);
+    await fs.promises.writeFile(tempPath, data, 'utf8');
+    await fs.promises.rename(tempPath, filePath);
+    return { success: true };
+  } catch (err) {
+    console.error('[Main] Lỗi lưu zumi_books.json vào đĩa:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('load-books-from-disk', async () => {
+  try {
+    const filePath = getBooksDataFilePath();
+    if (!fs.existsSync(filePath)) {
+      return { success: true, books: null };
+    }
+    const data = await fs.promises.readFile(filePath, 'utf8');
+    const books = JSON.parse(data);
+    return { success: true, books };
+  } catch (err) {
+    console.error('[Main] Lỗi đọc zumi_books.json từ đĩa:', err);
+    return { success: false, error: err.message, books: null };
+  }
+});
+
+
