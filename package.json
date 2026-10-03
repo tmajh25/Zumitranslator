@@ -1,16 +1,55 @@
 {
   "name": "zumitrans",
+  "productName": "ZumiTranslator",
   "version": "1.0.0",
+  "description": "Intelligent Multi-Platform AI Translation & eBook Processing Suite",
   "main": "main.js",
-  "private": true,
+  "author": "tmajh25",
+  "license": "MIT",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
+    "build:dir": "electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.zumitranslator.app",
+    "productName": "ZumiTranslator",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ZumiTranslator"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "services/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asar": true
   },
   "dependencies": {
     "docx": "^9.6.1",
-    "electron": "^41.2.0",
     "epub2": "^3.0.2",
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0"
+  },
+  "devDependencies": {
+    "electron": "^41.2.0",
+    "electron-builder": "^26.15.3"
   }
 }
