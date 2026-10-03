@@ -202,6 +202,8 @@ const Translation = {
     }
 
     let modelFailCount = 0;
+    // Model bị chặn do bộ lọc an toàn chỉ bỏ qua cho ĐOẠN NÀY, đoạn sau vẫn quay lại model chính
+    const chunkTriedSteps = new Set();
 
     while (true) {
       try {
@@ -217,9 +219,6 @@ const Translation = {
         const currentProv = callParams.apiProvider || 'gemini';
         const currentModel = callParams.model || '';
 
-        // Backend đã thử hết tất cả API Key (mỗi key 3 lần) → chuyển model/provider ngay
-        session.triedSteps.add(`${currentProv}:${currentModel}`);
-
         const isQuota = this.isRateLimitOrQuotaError(err);
         const isSafetyOrProhibited = err && err.message && (
           err.message.includes('PROHIBITED_CONTENT') ||
@@ -227,6 +226,11 @@ const Translation = {
           err.message.includes('SAFETY') ||
           err.message.includes('nhạy cảm')
         );
+
+        // Hết quota: đánh dấu cho cả phiên dịch. Bị chặn nội dung: chỉ đánh dấu cho đoạn này.
+        const failedKey = `${currentProv}:${currentModel}`;
+        if (isSafetyOrProhibited) chunkTriedSteps.add(failedKey);
+        else session.triedSteps.add(failedKey);
 
         // Find the next untried step in the unified interleaved fallback chain
         let nextStep = null;
@@ -238,7 +242,7 @@ const Translation = {
           if (isSafetyOrProhibited && step.provider === currentProv) continue;
 
           const stepKey = `${step.provider}:${step.model}`;
-          if (session.triedSteps.has(stepKey)) continue;
+          if (session.triedSteps.has(stepKey) || chunkTriedSteps.has(stepKey)) continue;
 
           // Check if provider has valid API key or is free
           const provCfg = State.getProviderConfig(step.provider);
@@ -270,8 +274,10 @@ const Translation = {
         }
 
         if (nextStep) {
-          session.provider = nextStep.provider;
-          session.model = nextStep.model;
+          if (!isSafetyOrProhibited) {
+            session.provider = nextStep.provider;
+            session.model = nextStep.model;
+          }
           const nextCfg = State.getProviderConfig(nextStep.provider);
 
           callParams.apiProvider = nextStep.provider;
@@ -293,8 +299,10 @@ const Translation = {
 
         // Safety net: Google Free if enabled
         if (s.fallbackToGoogleFree !== false && callParams.apiProvider !== 'google-free') {
-          session.provider = 'google-free';
-          session.model = '';
+          if (!isSafetyOrProhibited) {
+            session.provider = 'google-free';
+            session.model = '';
+          }
           callParams.apiProvider = 'google-free';
           callParams.model = '';
           callParams.apiKey = '';

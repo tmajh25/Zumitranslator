@@ -346,6 +346,9 @@ async function translateGemini({
     throw new Error(errorMsg);
   }
 
+  if (sawEmptyResponse) {
+    throw new Error(`[Gemini ${activeModel}] Nội dung bị chặn bởi chính sách an toàn của Google (SAFETY) trên toàn bộ ${keys.length} API Key.`);
+  }
   throw new Error(`[Gemini ${activeModel}] Không thể dịch đoạn văn sau nhiều lần thử trên toàn bộ ${keys.length} API Key.`);
 }
 
