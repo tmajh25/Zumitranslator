@@ -1,8 +1,8 @@
 # ZumiTranslator
 
 <p align="center">
-  <strong>Ứng dụng dịch thuật văn bản và sách điện tử thông minh hỗ trợ đa nền tảng AI</strong><br>
-  Tối ưu hóa chuyên sâu cho dịch tiểu thuyết, Light Novel, Web Novel, tài liệu văn học và tệp định dạng lớn.
+  <strong>Intelligent Multi-Platform AI Translation & eBook Processing Suite</strong><br>
+  Engineered specifically for web novels, light novels, literary works, and large-format documents.
 </p>
 
 <p align="center">
@@ -15,136 +15,137 @@
 
 ---
 
-## Giới thiệu
+## Overview
 
-ZumiTranslator là ứng dụng desktop xây dựng trên Electron, tích hợp trực tiếp với các mô hình ngôn ngữ lớn (LLM) phổ biến cùng hệ thống công cụ biên tập chuyên sâu. Ứng dụng giải quyết các bài toán đặc thù trong dịch thuật văn chương: tính nhất quán của hệ thống nhân vật, ma trận xưng hô biến hóa theo bối cảnh đối thoại, bộ lọc tránh từ chối dịch từ phía AI và bảo toàn nguyên vẹn cấu trúc sách điện tử (EPUB, DOCX, TXT).
-
----
-
-## Tính năng chính
-
-### 1. Đa dạng nhà cung cấp AI
-- **Google Gemini**: Hỗ trợ dòng Gemini 2.5 (`gemini-2.5-flash`, `gemini-2.5-pro`) và dòng Gemini 3.x (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3.1-pro-preview`...).
-- **OpenAI**: Hỗ trợ các mô hình GPT-4o, GPT-5/6 và mô hình suy luận (Reasoning models).
-- **DeepSeek**: Hỗ trợ DeepSeek-V3 và DeepSeek-R1 cho dịch thuật ngữ cảnh phức tạp.
-- **Groq & Cerebras Cloud**: Tốc độ xử lý siêu nhanh, tối ưu cho xử lý hàng loạt chương.
-- **OpenRouter & Custom API**: Hỗ trợ kết nối các mô hình mã nguồn mở và endpoint chuẩn OpenAI-compatible.
-- **DeepL & Google Translate**: Hỗ trợ dịch máy truyền thống và Google Dịch miễn phí.
-
-### 2. Quản lý API Key (Key Pool) và Cơ chế Fallback
-- **Key Pool**: Lưu trữ và tự động xoay vòng (Round-robin) nhiều API Key cho mỗi nhà cung cấp, giúp phân tán tải và phòng tránh lỗi giới hạn tần suất (Rate Limit 429).
-- **Fallback Chain**: Tự động chuyển đổi sang model hoặc nhà cung cấp dự phòng khi dịch vụ chính gặp sự cố, đảm bảo phiên dịch không bị gián đoạn.
-- **Kiểm tra kết nối trực tiếp**: Đo độ trễ (latency), xác thực tính hợp lệ của key và hiển thị trạng thái kết nối.
-
-### 3. Hồ sơ nhân vật và Ma trận xưng hô
-- **Quản lý danh sách nhân vật**: Lưu trữ tên gốc, tên dịch, giới tính, thân phận, vai trò và ghi chú khi dịch.
-- **Ma trận xưng hô theo đối tượng**: Thiết lập cách nhân vật tự xưng (`self`) và gọi đối phương (`others`) ứng với từng nhân vật mục tiêu (`target`), đảm bảo văn phong phù hợp với từng thể loại (kiếm hiệp, tiên hiệp, hiện đại, viễn tưởng).
-- **Character Scanner**: Tự động quét và phát hiện các nhân vật xuất hiện trong từng chương để đưa vào ngữ cảnh dịch.
-
-### 4. Từ điển thuật ngữ (Glossary)
-- Quản lý từ điển riêng cho từng tác phẩm: địa danh, môn phái, chiêu thức, cảnh giới, danh xưng.
-- **Glossary Scanner**: Nhận diện thuật ngữ xuất hiện trong văn bản nguồn để cố định nghĩa dịch xuyên suốt tác phẩm.
-
-### 5. Xử lý tệp và Sách điện tử (EPUB, DOCX, TXT)
-- **EPUB-Forge**: Đọc và bóc tách cấu trúc file EPUB, bảo toàn mục lục (TOC), hình ảnh minh họa, trang bìa và định dạng CSS.
-- **DOCX & TXT**: Bóc tách tài liệu Microsoft Word (.docx) và tự động nhận diện chia chương theo biểu thức chính quy (Regex) đối với file văn bản (.txt).
-- **Xuất tệp**: Xuất bản trực tiếp sang EPUB tối ưu, DOCX hoặc TXT phân chương.
-
-### 6. Bộ lọc kiểm duyệt và Uyển ngữ (Euphemism Filter)
-- **R18 Detector**: Cảnh báo sớm các đoạn văn có nguy cơ kích hoạt bộ lọc kiểm duyệt nội dung của nhà cung cấp AI.
-- **Euphemism Filter**: Tự động mã hóa, thay thế các từ ngữ nhạy cảm trước khi gửi API và khôi phục lại sau khi dịch xong, tránh hiện tượng AI từ chối phản hồi.
-
-### 7. Không gian làm việc và Giám sát tiến trình
-- **Kệ sách (Bookshelf)**: Quản lý danh mục nhiều đầu sách và theo dõi tiến độ tổng quan.
-- **Trình biên tập song ngữ (Bilingual Editor)**: Màn hình đối chiếu song song giữa bản gốc và bản dịch, cho phép chỉnh sửa trực tiếp từng phân đoạn.
-- **Bảng giám sát (Inspector)**: Theo dõi log giao tiếp API, số token tiêu thụ, chi phí ước tính và tốc độ dịch theo thời gian thực.
-- **Tùy biến giao diện (Appearance)**: Hỗ trợ chế độ sáng/tối, lựa chọn phông chữ tiếng Việt (Inter, Be Vietnam Pro, Merriweather, Fira Code), tùy chỉnh kích cỡ chữ và độ bo góc.
+ZumiTranslator is a desktop application built on Electron, seamlessly integrating state-of-the-art Large Language Models (LLMs) with specialized literary editing workflows. It resolves critical challenges inherent in literary translation: character voice consistency, contextual pronoun mapping, automated euphemism filtering to bypass AI safety refusals, and deep structural preservation of eBooks (EPUB, DOCX, TXT).
 
 ---
 
-## Cài đặt và Khởi chạy
+## Key Features
 
-### Yêu cầu hệ thống
-- Node.js phiên bản 18.0.0 trở lên.
-- Quản lý gói npm (đi kèm Node.js).
+### 1. Multi-Provider AI Support
+- **Google Gemini**: Full support for Gemini 2.5 (`gemini-2.5-flash`, `gemini-2.5-pro`) and Gemini 3.x series (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3.1-pro-preview`, etc.).
+- **OpenAI**: Integrates GPT-4o, next-gen reasoning models, and standard OpenAI endpoints.
+- **DeepSeek**: Supports DeepSeek-V3 and DeepSeek-R1 for deep contextual reasoning and stylistic fidelity.
+- **Groq & Cerebras Cloud**: Ultra-high throughput inference optimized for rapid multi-chapter batch processing.
+- **OpenRouter & Custom Endpoints**: Connect to hundreds of open-source models via any OpenAI-compatible API.
+- **DeepL & Google Translate**: Integrated traditional machine translation and free Google Translate fallback.
 
-### Các bước cài đặt
+### 2. Key Pool Management & Fallback Chain
+- **Key Pool**: Store and automatically cycle through multiple API keys per provider in a round-robin schedule, mitigating rate limits (HTTP 429) across concurrent jobs.
+- **Hierarchical Fallback Chain**: Automatically shifts to secondary models or providers on quota exhaustion or network timeouts, preventing workflow interruptions.
+- **Live Latency & Verification**: Real-time ping diagnostics to inspect API key validity, latency, and model availability.
 
-1. Tải mã nguồn về máy:
+### 3. Character Profiles & Dynamic Pronoun Matrix
+- **Entity Management**: Register original names, localized names, gender, relationship hierarchy, roles, and translation notes.
+- **Contextual Pronoun Matrix**: Define how a character refers to themselves (`self`) and addresses interlocutors (`others`) relative to specific conversation partners (`target`), preserving complex honorifics and period-accurate vernaculars.
+- **Automated Character Scanner**: Scans chapters to detect present characters and inject tailored contextual memory directly into prompts.
+
+### 4. Specialized Terminology (Book Glossary)
+- Dedicated per-volume or global glossaries for martial arts realms, artifact names, factions, spells, and geographical locations.
+- **Glossary Scanner**: Automatically identifies and reinforces required terminology across every chapter.
+
+### 5. Document & eBook Processing (EPUB-Forge, DOCX, TXT)
+- **EPUB-Forge**: In-depth parsing that preserves complete EPUB structures (NCX/Nav tables of contents, embedded illustrations, cover images, and CSS stylesheets).
+- **DOCX & TXT Parsing**: Robust Microsoft Word (.docx) ingestion and intelligent regex-driven chapter splitting for raw text (.txt).
+- **Production-Ready Export**: Export cleanly formatted, size-optimized EPUB files, DOCX documents, or segmented TXT files.
+
+### 6. Safety Moderation & Euphemism Filter
+- **R18 Content Detector**: Flags mature, graphic, or sensitive segments that risk triggering upstream LLM safety filters.
+- **Euphemism Engine**: Automatically masks sensitive phrasing with contextual euphemisms prior to API dispatch, then seamlessly restores the authentic narrative post-translation.
+
+### 7. Chapter Workspace & Real-Time Telemetry
+- **Bookshelf Dashboard**: Manage multiple concurrent translation projects with visual covers and progress trackers.
+- **Bilingual Side-by-Side Editor**: Dual-pane workspace allowing real-time comparison and manual refinement of individual paragraphs.
+- **Inspector Modal**: Live telemetry tracking token consumption, latency, estimated costs, and translation speed (tokens/sec).
+- **Appearance Customizer**: Dark/Light mode, fine-tuned typography (Inter, Be Vietnam Pro, Merriweather, Fira Code), customizable font scale, and corner radius styling.
+
+---
+
+## Installation & Setup
+
+### Prerequisites
+- Node.js version 18.0.0 or higher.
+- npm (bundled with Node.js).
+
+### Steps
+
+1. Clone the repository:
    ```bash
-   git clone https://github.com/<your-username>/ZumiTranslator.git
-   cd ZumiTranslator
+   git clone https://github.com/tmajh25/Zumitranslator.git
+   cd Zumitranslator
    ```
 
-2. Cài đặt các gói phụ thuộc:
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Khởi chạy ứng dụng:
+3. Launch the application:
    ```bash
    npm start
    ```
 
 ---
 
-## Quy trình sử dụng
+## Standard Workflow
 
-1. **Cấu hình API**:
-   - Truy cập **Cài đặt** (Settings) -> Chọn nhà cung cấp mong muốn -> Nhập API Key vào **Key Pool**.
-   - Bấm **Kiểm tra kết nối** để xác minh trạng thái hoạt động.
+1. **Configure API Credentials**:
+   - Navigate to **Settings** -> Select your desired AI provider -> Add one or more keys into the **Key Pool**.
+   - Click **Test Connection** to confirm latency and status.
 
-2. **Thêm tác phẩm**:
-   - Vào mục **Kệ sách** (Bookshelf) -> Thêm tệp `.epub`, `.docx` hoặc `.txt`.
-   - Hệ thống tự động phân tích và tạo danh sách chương.
+2. **Import Book**:
+   - Open **Bookshelf** -> Drag and drop or select an `.epub`, `.docx`, or `.txt` file.
+   - The parser automatically segments and indexes all chapters.
 
-3. **Thiết lập Nhân vật và Từ điển**:
-   - Khai báo tên nhân vật và quy tắc xưng hô tại tab **Hồ sơ nhân vật**.
-   - Thêm các thuật ngữ cần dịch cố định tại tab **Từ điển**.
+3. **Configure Profiles & Terminology**:
+   - Configure character names and honorifics under **Character Profiles**.
+   - Add locked proper nouns and domain terms under **Glossary**.
 
-4. **Tiến hành dịch và Xuất bản**:
-   - Chọn chương cần dịch hoặc chạy dịch toàn bộ tác phẩm.
-   - Kiểm tra, biên tập nội dung trên trình soạn thảo song ngữ.
-   - Nhấn **Xuất sách** để tạo tệp EPUB, DOCX hoặc TXT hoàn thiện.
+4. **Translate & Export**:
+   - Translate individual chapters or initiate bulk batch translation.
+   - Inspect and edit outputs in the bilingual editor.
+   - Click **Export** to generate the final EPUB, DOCX, or TXT file.
 
 ---
 
-## Cấu trúc thư mục
+## Project Structure
 
 ```text
 ZumiTranslator/
-├── assets/                  # Biểu tượng, logo nhà cung cấp và tài nguyên giao diện
-├── renderer/                # Giao diện người dùng (Frontend Electron)
-│   ├── css/                 # Kiểu dáng CSS theo từng module
-│   ├── js/                  # Logic xử lý giao diện
-│   │   ├── ai/              # Module kết nối các nhà cung cấp AI
-│   │   ├── character/       # Quản lý hồ sơ nhân vật và xưng hô
-│   │   ├── controllers/     # Bộ điều phối sự kiện giao diện
-│   │   ├── glossary/        # Quét và xử lý từ điển thuật ngữ
-│   │   ├── translation/     # Xử lý ngữ cảnh dịch và hậu kiểm
-│   │   └── workspace/       # Không gian làm việc song ngữ
-│   ├── partials/            # Các thành phần HTML module hóa
-│   └── index.html           # Khung ứng dụng chính
-├── services/                # Tiến trình xử lý dữ liệu nền (Node.js/Electron)
-│   ├── file/                # Xử lý tệp EPUB, DOCX, TXT
-│   └── translators/         # Adapter API, bộ lọc uyển ngữ, chuẩn hóa kết quả
-├── main.js                  # Main Process của Electron
-├── preload.js               # IPC Bridge bảo mật giữa Main và Renderer
-└── package.json             # Danh mục gói và cấu hình dự án
+├── assets/                  # Application logos, provider badges, and UI icons
+├── renderer/                # Electron frontend user interface
+│   ├── css/                 # Modular stylesheet hierarchy
+│   ├── js/                  # Client-side state and UI logic
+│   │   ├── ai/              # AI provider integration clients
+│   │   ├── character/       # Character profile and pronoun matrix modules
+│   │   ├── controllers/     # UI event controllers (Bookshelf, Settings, File...)
+│   │   ├── glossary/        # Terminology scanner and glossary manager
+│   │   ├── translation/     # Context assembling and post-processing
+│   │   └── workspace/       # Split-pane bilingual workspace
+│   ├── partials/            # Modular HTML component partials
+│   └── index.html           # Main application window template
+├── services/                # Electron main-process backend services
+│   ├── file/                # EPUB, DOCX, and TXT file handlers and optimizers
+│   └── translators/         # Translation adapters, prompt builders, euphemism filters
+├── main.js                  # Electron application entry point
+├── preload.js               # Secure IPC bridge between Main and Renderer
+└── package.json             # Project manifest and dependency specifications
 ```
 
 ---
 
-## Đóng góp phát triển
+## Contributing
 
-1. Fork repository.
-2. Tạo nhánh tính năng mới (`git checkout -b feature/ten-tinh-nang`).
-3. Commit các thay đổi (`git commit -m "Mo ta tinh nang"`).
-4. Push nhánh lên repository cá nhân (`git push origin feature/ten-tinh-nang`).
-5. Tạo Pull Request để xem xét tích hợp.
+Contributions, issue reports, and feature proposals are welcome:
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/your-feature-name`).
+3. Commit your changes (`git commit -m "Add descriptive commit message"`).
+4. Push to your branch (`git push origin feature/your-feature-name`).
+5. Submit a **Pull Request**.
 
 ---
 
-## Giấy phép
+## License
 
-Dự án được phát hành theo giấy phép [MIT](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
