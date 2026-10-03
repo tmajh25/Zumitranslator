@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   saveBooksToDisk: (books) => ipcRenderer.invoke('save-books-to-disk', books),
+  saveSingleBookToDisk: (book) => ipcRenderer.invoke('save-single-book-to-disk', book),
   loadBooksFromDisk: () => ipcRenderer.invoke('load-books-from-disk'),
   cancelTranslation: () => ipcRenderer.send('cancel-translation'),
   optimizeEpub: (filePath, options) => ipcRenderer.invoke('optimize-epub', filePath, options)

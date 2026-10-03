@@ -12,6 +12,14 @@ try {
 
 const fileService = require('./services/file/fileService');
 const { translatorRegistry } = require('./services/translators');
+const bookStorage = require('./services/file/bookStorage');
+
+// Khởi tạo hệ thống lưu trữ sách phân tách theo file
+try {
+  bookStorage.init(app.getPath('userData'));
+} catch (err) {
+  console.error('[Main] Lỗi khởi tạo bookStorage:', err);
+}
 
 let mainWindow;
 
@@ -176,33 +184,20 @@ ipcMain.on('set-titlebar-overlay', (event, options) => {
 });
 
 // ============ PERSISTENT BOOK DATA STORAGE ============
-const getBooksDataFilePath = () => path.join(app.getPath('userData'), 'zumi_books.json');
-
 ipcMain.handle('save-books-to-disk', async (event, books) => {
-  try {
-    const filePath = getBooksDataFilePath();
-    const tempPath = `${filePath}.tmp_${Date.now()}`;
-    const data = JSON.stringify(books);
-    await fs.promises.writeFile(tempPath, data, 'utf8');
-    await fs.promises.rename(tempPath, filePath);
-    return { success: true };
-  } catch (err) {
-    console.error('[Main] Lỗi lưu zumi_books.json vào đĩa:', err);
-    return { success: false, error: err.message };
-  }
+  return await bookStorage.saveAllBooks(books);
+});
+
+ipcMain.handle('save-single-book-to-disk', async (event, book) => {
+  return await bookStorage.saveSingleBook(book);
 });
 
 ipcMain.handle('load-books-from-disk', async () => {
   try {
-    const filePath = getBooksDataFilePath();
-    if (!fs.existsSync(filePath)) {
-      return { success: true, books: null };
-    }
-    const data = await fs.promises.readFile(filePath, 'utf8');
-    const books = JSON.parse(data);
+    const books = await bookStorage.loadAllBooks();
     return { success: true, books };
   } catch (err) {
-    console.error('[Main] Lỗi đọc zumi_books.json từ đĩa:', err);
+    console.error('[Main] Lỗi đọc sách từ đĩa:', err);
     return { success: false, error: err.message, books: null };
   }
 });

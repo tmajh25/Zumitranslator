@@ -68,11 +68,13 @@ const State = {
     }
 
     const doSave = () => {
-      // 1. Ưu tiên lưu trực tiếp ra đĩa (Atomic write không bao giờ mất dữ liệu chương)
-      if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.saveBooksToDisk === 'function') {
-        window.electronAPI.saveBooksToDisk(this.books).catch(err => {
-          console.error('Lỗi khi lưu sách ra đĩa:', err);
-        });
+      // 1. Ưu tiên lưu trực tiếp ra đĩa (Atomic write qua BookStorage)
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        if (typeof window.electronAPI.saveBooksToDisk === 'function') {
+          window.electronAPI.saveBooksToDisk(this.books).catch(err => {
+            console.error('Lỗi khi lưu sách ra đĩa:', err);
+          });
+        }
       }
 
       // 2. Dự phòng trong localStorage (nếu dung lượng cho phép)
@@ -87,6 +89,29 @@ const State = {
       doSave();
     } else {
       this._saveBooksTimer = setTimeout(doSave, 1500);
+    }
+  },
+
+  saveCurrentBook(immediate = false) {
+    if (!this.currentBook) return this.saveBooks(immediate);
+
+    if (this._saveCurrentTimer) {
+      clearTimeout(this._saveCurrentTimer);
+      this._saveCurrentTimer = null;
+    }
+
+    const doSave = () => {
+      if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.saveSingleBookToDisk === 'function') {
+        window.electronAPI.saveSingleBookToDisk(this.currentBook).catch(err => {
+          console.error('Lỗi khi lưu sách hiện tại:', err);
+        });
+      }
+    };
+
+    if (immediate) {
+      doSave();
+    } else {
+      this._saveCurrentTimer = setTimeout(doSave, 1200);
     }
   },
 
