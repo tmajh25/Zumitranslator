@@ -700,15 +700,25 @@ const ProgressDetector = {
 
       let bd = null;
       if (hasFinishedContent) {
-        const text = (fc.content && fc.content.trim()) ? fc.content : (fc.title || '');
-        bd = this.getLanguageBreakdown(text, targetLang);
+        if (fc._langBreakdown) {
+          bd = fc._langBreakdown;
+        } else {
+          const text = (fc.content && fc.content.trim()) ? fc.content : (fc.title || '');
+          bd = this.getLanguageBreakdown(text, targetLang);
+          fc._langBreakdown = bd;
+        }
       } else if (ch._langEvaluation && ch._langEvaluation.breakdown) {
         bd = ch._langEvaluation.breakdown;
       } else {
-        const text = (ch.content && ch.content.trim()) ? ch.content : (ch.title || '');
-        if (text) {
-          bd = this.getLanguageBreakdown(text, targetLang);
-          if (!ch._langEvaluation) ch._langEvaluation = { breakdown: bd, targetPercent: bd.targetPercent };
+        if (ch._langBreakdown) {
+          bd = ch._langBreakdown;
+        } else {
+          const text = (ch.content && ch.content.trim()) ? ch.content : (ch.title || '');
+          if (text) {
+            bd = this.getLanguageBreakdown(text, targetLang);
+            ch._langBreakdown = bd;
+            if (!ch._langEvaluation) ch._langEvaluation = { breakdown: bd, targetPercent: bd.targetPercent };
+          }
         }
       }
 

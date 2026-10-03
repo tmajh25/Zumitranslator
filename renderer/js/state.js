@@ -99,11 +99,23 @@ const State = {
         }
       }
 
-      // 2. Dự phòng trong localStorage (nếu dung lượng cho phép)
+      // 2. Dự phòng trong localStorage: CHỈ lưu danh sách metadata sách gọn nhẹ
+      // Tuyệt đối không serialize toàn bộ text hàng chục MB vào localStorage gây giật lag giao diện
       try {
-        localStorage.setItem('zumi_books', JSON.stringify(this.books));
+        const metadataOnly = (this.books || []).map(b => ({
+          id: b.id,
+          title: b.title,
+          author: b.author,
+          filePath: b.filePath,
+          coverImage: b.coverImage,
+          progressPercent: b.progressPercent,
+          processedChunks: b.processedChunks,
+          totalChunks: b.totalChunks,
+          lastAccessed: b.lastAccessed
+        }));
+        localStorage.setItem('zumi_books', JSON.stringify(metadataOnly));
       } catch (e) {
-        // Khi vượt quá 5MB của localStorage, dữ liệu sách vẫn an toàn 100% trên đĩa
+        // Dữ liệu sách đã được lưu an toàn 100% trên đĩa
       }
     };
 
@@ -549,7 +561,6 @@ const State = {
     this.currentBook.lastAccessed = Date.now();
     
     this.saveCurrentBook();
-    this.saveBooks();
   },
 
   clearTranslationProgress() {

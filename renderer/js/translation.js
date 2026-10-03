@@ -740,9 +740,10 @@ const Translation = {
       this.renderCompletedChapters();
       
       // Refresh chapter list UI and workspace
-      Bookshelf.renderChapterList();
       if (window.ChapterWorkspace) {
         ChapterWorkspace.render();
+      } else if (window.Bookshelf) {
+        Bookshelf.renderChapterList();
       }
       if (window.TranslationWorkflow) TranslationWorkflow.update();
     }
