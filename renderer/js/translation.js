@@ -453,14 +453,18 @@ const Translation = {
           let chapterSuccess = false;
           let lastErr = null;
           const maxChapterAttempts = 2;
+          let chunksThisAttempt = 0;
+          const countChunk = () => { chunksThisAttempt++; onChunkProcessed(); };
 
           for (let attempt = 1; attempt <= maxChapterAttempts; attempt++) {
             try {
               if (attempt > 1) {
+                progress.processed -= chunksThisAttempt;
+                chunksThisAttempt = 0;
                 console.warn(`[ZumiTranslator] Tự động thử lại ${chapterData.title} (Lần ${attempt}/${maxChapterAttempts})...`);
                 await new Promise(r => setTimeout(r, 2000));
               }
-              await this.translateChapter(chapterData, s, onChunkProcessed, progress);
+              await this.translateChapter(chapterData, s, countChunk, progress);
               chapterSuccess = true;
               break;
             } catch (err) {

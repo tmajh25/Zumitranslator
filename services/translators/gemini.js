@@ -72,6 +72,7 @@ async function translateGemini({
   let response;
   const triedKeyIndices = new Set();
   const maxRetriesPerKey = 3;
+  let sawEmptyResponse = false;
 
   while (triedKeyIndices.size < keys.length) {
     const keyIdx = currentKeyIndex % keys.length;
@@ -85,7 +86,10 @@ async function translateGemini({
     while (keyRetryCount <= maxRetriesPerKey) {
       let url, headers, body;
 
-      const baseTemp = temperature === undefined ? (isAdultContent ? 0.35 : 0.7) : parseFloat(temperature);
+      const userTemp = parseFloat(temperature);
+      const safeTemp = isNaN(userTemp) ? 0.7 : userTemp;
+      // Nội dung 18+: giới hạn nhiệt độ <= 0.4 để giảm dao động ngẫu nhiên gây bị chặn
+      const baseTemp = isAdultContent ? Math.min(safeTemp, 0.4) : safeTemp;
       const effectiveTemp = Math.max(0.1, baseTemp - (keyRetryCount * 0.1));
 
       if (isInteractions) {
@@ -212,6 +216,7 @@ async function translateGemini({
           const finishReason = data.candidates?.[0]?.finishReason;
           const reasonStr = blockReason || finishReason || 'empty_candidate';
           console.warn(`[Gemini (${activeModel})] Phản hồi rỗng (${reasonStr}) tại Key #${keyNum}/${keys.length}.`);
+          sawEmptyResponse = true;
 
           keyRetryCount++;
           if (keyRetryCount <= maxRetriesPerKey) {
@@ -300,7 +305,7 @@ async function translateGemini({
   }
 
   // Nếu chưa có lần thử uyển ngữ R18 nào, tự động kích hoạt uyển ngữ và thử lại toàn bộ Key Pool
-  if (!_isEuphemismRetry) {
+  if (!_isEuphemismRetry && sawEmptyResponse) {
     console.warn(`[Gemini (${activeModel})] Chưa nhận được kết quả dịch hợp lệ. Tự động kích hoạt chuyển đổi uyển ngữ văn học (R18 Bypass) và thử lại toàn bộ Key Pool...`);
     const maskedText = EuphemismFilter.mask(text, sourceLang);
     return translateGemini({
