@@ -396,6 +396,10 @@ const State = {
       defaults.push({ provider: 'groq', model: 'llama-3.3-70b-versatile' });
     }
 
+    if (!defaults.some(d => d.provider === 'google-free')) {
+      defaults.push({ provider: 'google-free', model: 'default' });
+    }
+
     return defaults;
   },
 

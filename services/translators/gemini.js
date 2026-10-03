@@ -48,7 +48,8 @@ async function translateGemini({
   let activeModel = model || 'gemini-3.8-flash';
 
   const r18Detection = R18Detector.detect(text, sourceLang);
-  const effectiveSafetySetting = r18Detection.isR18 ? 'BLOCK_NONE' : safetySetting;
+  const isAdultContent = r18Detection.isR18 || _isEuphemismRetry;
+  const effectiveSafetySetting = isAdultContent ? 'BLOCK_NONE' : safetySetting;
 
   const instructions = PromptBuilder.buildSystemInstruction({
     customPrompt,
@@ -61,7 +62,9 @@ async function translateGemini({
     text
   });
 
-  const contentToTranslate = text;
+  // Tự động chuyển đổi các từ ngữ thô tục sang thuật ngữ giải phẫu/văn học khi phát hiện R18
+  // giúp vượt qua hoàn toàn bộ lọc nội dung nhạy cảm của Google mà vẫn giữ trọn vẹn nghĩa nguyên tác
+  const contentToTranslate = isAdultContent ? EuphemismFilter.mask(text, sourceLang) : text;
 
   const normThinking = (thinkingLevel || 'medium').toLowerCase().trim();
   const isInteractions = baseUrl.includes('/interactions');
@@ -92,7 +95,7 @@ async function translateGemini({
         body = {
           model: activeModel,
           system_instruction: instructions,
-          input: `${instructions}\n\n[VĂN BẢN GỐC]:\n${contentToTranslate}`,
+          input: `[VĂN BẢN GỐC]:\n${contentToTranslate}`,
           generation_config: {
             temperature: temperature === undefined ? 1.0 : parseFloat(temperature),
             thinking_level: normThinking
@@ -109,7 +112,7 @@ async function translateGemini({
             parts: [{ text: instructions }]
           },
           contents: [{
-            parts: [{ text: `${instructions}\n\n[VĂN BẢN GỐC CẦN DỊCH]:\n${contentToTranslate}` }]
+            parts: [{ text: `[VĂN BẢN GỐC CẦN DỊCH]:\n${contentToTranslate}` }]
           }],
           generationConfig: {
             temperature: temperature === undefined ? 1.0 : parseFloat(temperature),
@@ -285,34 +288,34 @@ async function translateGemini({
   if (!responseText) {
     const blockReason = data.promptFeedback?.blockReason;
     const finishReason = data.candidates?.[0]?.finishReason;
-    const isBlocked = blockReason || finishReason === 'SAFETY' || finishReason === 'BLOCKLIST' || finishReason === 'PROHIBITED_CONTENT';
+    const reasonStr = blockReason || finishReason || 'Bộ lọc kiểm duyệt nhạy cảm';
 
-    if (isBlocked) {
-      if (!_isEuphemismRetry) {
-        console.warn(`[Gemini (${activeModel})] Nội dung bị bộ lọc an toàn Google chặn (${blockReason || finishReason}). Tự động kích hoạt chuyển đổi uyển ngữ văn học (R18 Bypass) và thử lại...`);
-        const maskedText = EuphemismFilter.mask(text, sourceLang);
-        return translateGemini({
-          text: maskedText,
-          sourceLang,
-          targetLang,
-          customPrompt,
-          apiKey,
-          model: activeModel,
-          thinkingLevel,
-          safetySetting: 'BLOCK_NONE',
-          temperature,
-          glossary,
-          characterProfiles,
-          context,
-          apiEndpoint,
-          bookMemory,
-          abortSignal,
-          _isEuphemismRetry: true
-        });
-      }
-      throw new Error(`Nội dung bị chặn bởi chính sách an toàn của Google (${blockReason || finishReason}). Vui lòng chuyển sang DeepSeek hoặc bật dự phòng Google Dịch để dịch chương này.`);
+    // Bất kể lý do phản hồi rỗng là gì (SAFETY, OTHER, RECITATION hay no candidate),
+    // luôn tự động kích hoạt chuyển đổi uyển ngữ văn học R18 và thử lại với BLOCK_NONE
+    if (!_isEuphemismRetry) {
+      console.warn(`[Gemini (${activeModel})] Không nhận được phản hồi text từ AI (Lý do: ${reasonStr}). Tự động kích hoạt chuyển đổi uyển ngữ văn học (R18 Bypass) và thử lại...`);
+      const maskedText = EuphemismFilter.mask(text, sourceLang);
+      return translateGemini({
+        text: maskedText,
+        sourceLang,
+        targetLang,
+        customPrompt,
+        apiKey,
+        model: activeModel,
+        thinkingLevel,
+        safetySetting: 'BLOCK_NONE',
+        temperature,
+        glossary,
+        characterProfiles,
+        context,
+        apiEndpoint,
+        bookMemory,
+        abortSignal,
+        _isEuphemismRetry: true
+      });
     }
-    throw new Error('Không nhận được phản hồi từ AI. Có thể do nội dung nhạy cảm hoặc lỗi hệ thống.');
+
+    throw new Error(`Nội dung bị chặn bởi chính sách an toàn của Google (${reasonStr}). Vui lòng chuyển sang DeepSeek hoặc bật dự phòng Google Dịch để dịch chương này.`);
   }
   
   return ResponseCleaner.clean(responseText.trim());
