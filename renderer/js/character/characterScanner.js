@@ -125,13 +125,15 @@ const CharacterScanner = {
     if (aiProviders.includes(s.apiProvider)) {
       const pConfig = State.getProviderConfig ? State.getProviderConfig(s.apiProvider) : {};
       const apiKey = this.extractCleanKey(pConfig, s.apiKey);
-      return applyProfilerModel({
-        provider: s.apiProvider,
-        apiKey,
-        model: s.model,
-        customEndpoint: s.customEndpoint,
-        name: (s.apiProvider || '').toUpperCase()
-      });
+      if (apiKey || s.apiProvider === 'custom') {
+        return applyProfilerModel({
+          provider: s.apiProvider,
+          apiKey,
+          model: s.model,
+          customEndpoint: s.customEndpoint,
+          name: (s.apiProvider || '').toUpperCase()
+        });
+      }
     }
 
     // 3. Active provider is non-AI (e.g. google-free, deepl), look for any configured AI key
@@ -447,19 +449,23 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
         }
 
         try {
-          const transModule = window.AI && window.AI[candidate.provider];
-          if (!transModule || typeof transModule.translate !== 'function') {
-            throw new Error(`Provider "${candidate.provider}" chưa được nạp.`);
+          if (!window.electronAPI || typeof window.electronAPI.translateText !== 'function') {
+            throw new Error('Chức năng gọi AI (window.electronAPI.translateText) chưa sẵn sàng.');
           }
 
-          response = await transModule.translate(combinedText, {
-            systemPrompt: extractionPrompt,
+          response = await window.electronAPI.translateText({
+            text: combinedText,
+            sourceLang: bookLang || 'auto',
+            targetLang: targetLangCode || 'vi',
+            customPrompt: extractionPrompt,
+            apiProvider: candidate.provider,
             apiKey: candidate.apiKey,
             model: candidate.model,
+            apiEndpoint: candidate.customEndpoint || '',
             temperature: 0.1,
-            thinkingLevel: 'LOW',
-            customEndpoint: candidate.customEndpoint,
-            responseMimeType: 'application/json'
+            thinkingLevel: s.thinkingLevel || 'low',
+            reasoningEffort: s.reasoningEffort || 'low',
+            safetySetting: 'BLOCK_NONE'
           });
 
           if (response && response.trim().length > 10) {
@@ -482,21 +488,35 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
         jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
       }
 
-      let parsed;
+      let parsed = null;
       try {
         parsed = JSON.parse(jsonStr);
       } catch (e) {
         const start = jsonStr.indexOf('{');
         const end = jsonStr.lastIndexOf('}');
         if (start !== -1 && end !== -1 && end > start) {
-          parsed = JSON.parse(jsonStr.substring(start, end + 1));
-        } else {
-          throw new Error('Định dạng phản hồi từ AI không phải JSON hợp lệ.');
+          try {
+            parsed = JSON.parse(jsonStr.substring(start, end + 1));
+          } catch (e2) {
+            const sanitized = jsonStr.substring(start, end + 1).replace(/,\s*([}\]])/g, '$1');
+            try {
+              parsed = JSON.parse(sanitized);
+            } catch (e3) {
+              console.warn('[Profiler] Lỗi parse JSON từ phản hồi AI:', e, jsonStr);
+            }
+          }
         }
       }
 
-      if (!parsed || !Array.isArray(parsed.characters)) {
-        throw new Error('Không trích xuất được danh sách nhân vật hợp lệ từ phản hồi AI.');
+      if (!parsed) {
+        throw new Error('Không trích xuất được dữ liệu JSON hợp lệ từ phản hồi của AI.');
+      }
+
+      if (!Array.isArray(parsed.characters)) {
+        parsed.characters = [];
+      }
+      if (!Array.isArray(parsed.glossary)) {
+        parsed.glossary = [];
       }
 
       if (!Array.isArray(book.characterProfiles)) book.characterProfiles = [];
@@ -697,8 +717,14 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
       }
 
       State.saveBooks();
+      if (typeof State.saveCurrentBook === 'function') {
+        State.saveCurrentBook(true);
+      }
       if (window.CharacterProfile && typeof window.CharacterProfile.render === 'function') {
         window.CharacterProfile.render();
+      }
+      if (window.BookGlossary && typeof window.BookGlossary.render === 'function') {
+        window.BookGlossary.render();
       }
 
       let toastMsg = `AI đã đọc xong! `;

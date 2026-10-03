@@ -231,6 +231,9 @@ V. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT MÃ JSON HỢP LỆ):
       });
 
       State.saveBooks();
+      if (typeof State.saveCurrentBook === 'function') {
+        State.saveCurrentBook(true);
+      }
       if (controller && typeof controller.render === 'function') {
         controller.render();
       } else if (window.BookGlossary && typeof window.BookGlossary.render === 'function') {
