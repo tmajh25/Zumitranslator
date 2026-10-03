@@ -85,6 +85,9 @@ async function translateGemini({
     while (keyRetryCount <= maxRetriesPerKey) {
       let url, headers, body;
 
+      const baseTemp = temperature === undefined ? (isAdultContent ? 0.35 : 0.7) : parseFloat(temperature);
+      const effectiveTemp = Math.max(0.1, baseTemp - (keyRetryCount * 0.1));
+
       if (isInteractions) {
         url = baseUrl.includes('?') ? `${baseUrl}&key=${activeKey}` : `${baseUrl}?key=${activeKey}`;
         headers = {
@@ -97,7 +100,7 @@ async function translateGemini({
           system_instruction: instructions,
           input: `[VĂN BẢN GỐC]:\n${contentToTranslate}`,
           generation_config: {
-            temperature: temperature === undefined ? 1.0 : parseFloat(temperature),
+            temperature: effectiveTemp,
             thinking_level: normThinking
           }
         };
@@ -115,7 +118,7 @@ async function translateGemini({
             parts: [{ text: `[VĂN BẢN GỐC CẦN DỊCH]:\n${contentToTranslate}` }]
           }],
           generationConfig: {
-            temperature: temperature === undefined ? 1.0 : parseFloat(temperature),
+            temperature: effectiveTemp,
             maxOutputTokens: ((activeModel || '').includes('2.5') || (activeModel || '').includes('3.') || (activeModel || '').includes('flash-latest')) ? 65536 : 8192
           },
           safetySettings: [
@@ -173,7 +176,55 @@ async function translateGemini({
         clearTimeout(timeoutId);
         if (abortSignal) abortSignal.removeEventListener('abort', onAbort);
         
-        if (response.ok) break;
+        if (response.ok) {
+          let data;
+          try {
+            data = await response.json();
+          } catch (jsonErr) {
+            console.warn(`[Gemini (${activeModel})] Lỗi phân tích JSON phản hồi: ${jsonErr.message}`);
+            keyRetryCount++;
+            continue;
+          }
+
+          if (data && data.error) {
+            console.warn(`[Gemini (${activeModel})] API trả về error: ${data.error.message || JSON.stringify(data.error)}`);
+            switchKey = true;
+            break;
+          }
+
+          let responseText = data.output_text;
+          if (!responseText && data.candidates && data.candidates[0]?.content?.parts) {
+            responseText = data.candidates[0].content.parts.map(p => p.text || '').join('');
+          }
+          if (!responseText && data.steps && Array.isArray(data.steps)) {
+            const lastStep = data.steps.at(-1);
+            if (lastStep?.content && Array.isArray(lastStep.content)) {
+              responseText = lastStep.content.map(c => c.text || '').join('');
+            }
+          }
+
+          if (responseText && responseText.trim()) {
+            return ResponseCleaner.clean(responseText.trim());
+          }
+
+          // Khi HTTP 200 nhưng nội dung trống (do bộ lọc xác suất hoặc thinking)
+          const blockReason = data.promptFeedback?.blockReason;
+          const finishReason = data.candidates?.[0]?.finishReason;
+          const reasonStr = blockReason || finishReason || 'empty_candidate';
+          console.warn(`[Gemini (${activeModel})] Phản hồi rỗng (${reasonStr}) tại Key #${keyNum}/${keys.length}.`);
+
+          keyRetryCount++;
+          if (keyRetryCount <= maxRetriesPerKey) {
+            console.warn(`[Gemini (${activeModel})] Tự động thử lại lần ${keyRetryCount}/${maxRetriesPerKey} với nhiệt độ thấp hơn sau 1.5s...`);
+            await new Promise(r => setTimeout(r, 1500));
+            if (abortSignal && abortSignal.aborted) throw new Error('Dịch đã bị hủy');
+            continue;
+          } else {
+            console.warn(`[Gemini (${activeModel})] Key #${keyNum}/${keys.length} liên tục trả về rỗng. Đang chuyển sang Key tiếp theo trong Key Pool...`);
+            switchKey = true;
+            break;
+          }
+        }
 
         let errPeek = '';
         try {
@@ -234,10 +285,6 @@ async function translateGemini({
       }
     }
 
-    if (response && response.ok) {
-      break;
-    }
-
     if (switchKey || !response || !response.ok) {
       currentKeyIndex = (currentKeyIndex + 1) % keys.length;
       const nextKeyNum = (currentKeyIndex % keys.length) + 1;
@@ -250,6 +297,30 @@ async function translateGemini({
         break;
       }
     }
+  }
+
+  // Nếu chưa có lần thử uyển ngữ R18 nào, tự động kích hoạt uyển ngữ và thử lại toàn bộ Key Pool
+  if (!_isEuphemismRetry) {
+    console.warn(`[Gemini (${activeModel})] Chưa nhận được kết quả dịch hợp lệ. Tự động kích hoạt chuyển đổi uyển ngữ văn học (R18 Bypass) và thử lại toàn bộ Key Pool...`);
+    const maskedText = EuphemismFilter.mask(text, sourceLang);
+    return translateGemini({
+      text: maskedText,
+      sourceLang,
+      targetLang,
+      customPrompt,
+      apiKey,
+      model: activeModel,
+      thinkingLevel,
+      safetySetting: 'BLOCK_NONE',
+      temperature: 0.3,
+      glossary,
+      characterProfiles,
+      context,
+      apiEndpoint,
+      bookMemory,
+      abortSignal,
+      _isEuphemismRetry: true
+    });
   }
   
   if (!response || !response.ok) {
@@ -270,55 +341,7 @@ async function translateGemini({
     throw new Error(errorMsg);
   }
 
-  const data = await response.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  
-  // Extract response text from Interactions API (output_text / steps) or generateContent (candidates)
-  let responseText = data.output_text;
-  if (!responseText && data.candidates && data.candidates[0]?.content?.parts) {
-    responseText = data.candidates[0].content.parts.map(p => p.text || '').join('');
-  }
-  if (!responseText && data.steps && Array.isArray(data.steps)) {
-    const lastStep = data.steps.at(-1);
-    if (lastStep?.content && Array.isArray(lastStep.content)) {
-      responseText = lastStep.content.map(c => c.text || '').join('');
-    }
-  }
-
-  if (!responseText) {
-    const blockReason = data.promptFeedback?.blockReason;
-    const finishReason = data.candidates?.[0]?.finishReason;
-    const reasonStr = blockReason || finishReason || 'Bộ lọc kiểm duyệt nhạy cảm';
-
-    // Bất kể lý do phản hồi rỗng là gì (SAFETY, OTHER, RECITATION hay no candidate),
-    // luôn tự động kích hoạt chuyển đổi uyển ngữ văn học R18 và thử lại với BLOCK_NONE
-    if (!_isEuphemismRetry) {
-      console.warn(`[Gemini (${activeModel})] Không nhận được phản hồi text từ AI (Lý do: ${reasonStr}). Tự động kích hoạt chuyển đổi uyển ngữ văn học (R18 Bypass) và thử lại...`);
-      const maskedText = EuphemismFilter.mask(text, sourceLang);
-      return translateGemini({
-        text: maskedText,
-        sourceLang,
-        targetLang,
-        customPrompt,
-        apiKey,
-        model: activeModel,
-        thinkingLevel,
-        safetySetting: 'BLOCK_NONE',
-        temperature,
-        glossary,
-        characterProfiles,
-        context,
-        apiEndpoint,
-        bookMemory,
-        abortSignal,
-        _isEuphemismRetry: true
-      });
-    }
-
-    throw new Error(`Nội dung bị chặn bởi chính sách an toàn của Google (${reasonStr}). Vui lòng chuyển sang DeepSeek hoặc bật dự phòng Google Dịch để dịch chương này.`);
-  }
-  
-  return ResponseCleaner.clean(responseText.trim());
+  throw new Error(`[Gemini ${activeModel}] Không thể dịch đoạn văn sau nhiều lần thử trên toàn bộ ${keys.length} API Key.`);
 }
 
 module.exports = {

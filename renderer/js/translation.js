@@ -450,8 +450,30 @@ const Translation = {
             ChapterWorkspace.renderListOnly();
           }
 
-          try {
-            await this.translateChapter(chapterData, s, onChunkProcessed, progress);
+          let chapterSuccess = false;
+          let lastErr = null;
+          const maxChapterAttempts = 2;
+
+          for (let attempt = 1; attempt <= maxChapterAttempts; attempt++) {
+            try {
+              if (attempt > 1) {
+                console.warn(`[ZumiTranslator] Tự động thử lại ${chapterData.title} (Lần ${attempt}/${maxChapterAttempts})...`);
+                await new Promise(r => setTimeout(r, 2000));
+              }
+              await this.translateChapter(chapterData, s, onChunkProcessed, progress);
+              chapterSuccess = true;
+              break;
+            } catch (err) {
+              lastErr = err;
+              if (State.cancelRequested) break;
+              if (attempt < maxChapterAttempts) {
+                console.warn(`[ZumiTranslator] ${chapterData.title} gặp sự cố tạm thời (${err.message}). Đang tự động thử lại...`);
+                continue;
+              }
+            }
+          }
+
+          if (chapterSuccess) {
             if (targetCh) {
               delete targetCh._isTranslating;
             }
@@ -461,7 +483,8 @@ const Translation = {
             if (s.enableDelay !== false && s.requestDelay > 0 && queue.length > 0 && !State.cancelRequested) {
               await new Promise(r => setTimeout(r, s.requestDelay));
             }
-          } catch (err) {
+          } else {
+            const err = lastErr || new Error('Lỗi dịch');
             if (targetCh) {
               delete targetCh._isTranslating;
               targetCh._translationError = err.message || 'Lỗi dịch';
