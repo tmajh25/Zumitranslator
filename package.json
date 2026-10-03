@@ -1,6 +1,5 @@
 {
   "name": "zumitrans",
-  "productName": "ZumiTranslator",
   "version": "1.0.0",
   "description": "Intelligent Multi-Platform AI Translation & eBook Processing Suite",
   "main": "main.js",

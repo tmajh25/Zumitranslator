@@ -1,6 +1,15 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+
+// Giữ nguyên đường dẫn userData tới 'zumitrans' để bảo toàn toàn bộ dữ liệu sách và cài đặt cũ
+try {
+  const targetUserData = path.join(app.getPath('appData'), 'zumitrans');
+  app.setPath('userData', targetUserData);
+} catch (e) {
+  console.warn('Could not set custom userData path:', e);
+}
+
 const fileService = require('./services/file/fileService');
 const { translatorRegistry } = require('./services/translators');
 
