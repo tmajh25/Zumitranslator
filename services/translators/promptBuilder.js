@@ -27,9 +27,9 @@ class PromptBuilder {
     let instructions;
     if (r18Info.isR18) {
       if (!customPrompt) {
-        instructions = `Bạn là chuyên gia dịch thuật văn học nghệ thuật. Hãy dịch TOÀN BỘ văn bản sau từ ${langNames.source} sang ${langNames.target} chuẩn xác từng câu từng chữ, BÁM SÁT 100% NGUYÊN TÁC, diễn đạt chân thực tự nhiên theo đúng ngữ cảnh tiểu thuyết. Giữ trọn vẹn mọi tình tiết, đối thoại và tâm lý nhân vật, tuyệt đối không tự ý cắt xén, tóm tắt hay che đậy. Chỉ xuất duy nhất kết quả dịch.`;
+        instructions = `Bạn là chuyên gia dịch thuật văn học nghệ thuật. Hãy dịch TOÀN BỘ văn bản sau từ ${langNames.source} sang ${langNames.target} chuẩn xác từng câu từng chữ, BÁM SÁT 100% NGUYÊN TÁC, diễn đạt chân thực tự nhiên theo đúng ngữ cảnh tiểu thuyết. Giữ đúng các từ ngữ, phong cách và sắc thái ban đầu của tác giả, không tự ý nói giảm nói tránh, làm nhẹ bớt, cắt xén hay che đậy. Chỉ xuất duy nhất kết quả dịch.`;
       } else {
-        instructions = `${customPrompt}\n\n[HƯỚNG DẪN DỊCH NGUYÊN TÁC]: Yêu cầu dịch chuẩn xác 100% bám sát từng câu chữ của tác phẩm, giữ nguyên trọn vẹn lời thoại và hành động nhân vật, tuyệt đối không tự ý cắt xén, tóm tắt hay che đậy.`;
+        instructions = `${customPrompt}\n\n[HƯỚNG DẪN DỊCH NGUYÊN TÁC]: Dịch chuẩn xác 100% bám sát từng câu chữ và từ ngữ ban đầu của tác phẩm, giữ đúng sắc thái nguyên tác, không tự ý nói giảm nói tránh, làm nhẹ bớt hay cắt xén.`;
       }
     } else {
       instructions = customPrompt || `You are a professional literary translator. Translate from ${langNames.source} to ${langNames.target}. 

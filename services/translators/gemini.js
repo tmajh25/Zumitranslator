@@ -62,9 +62,9 @@ async function translateGemini({
     text
   });
 
-  // Tự động chuyển đổi các từ ngữ thô tục sang thuật ngữ giải phẫu/văn học khi phát hiện R18
-  // giúp vượt qua hoàn toàn bộ lọc nội dung nhạy cảm của Google mà vẫn giữ trọn vẹn nghĩa nguyên tác
-  const contentToTranslate = isAdultContent ? EuphemismFilter.mask(text, sourceLang) : text;
+  // Ưu tiên dịch trực tiếp 100% văn bản gốc để bảo toàn đúng từng từ ngữ và phong cách ban đầu của tác giả.
+  // Chỉ kích hoạt chuyển đổi uyển ngữ (EuphemismFilter) khi là lượt thử lại khẩn cấp (_isEuphemismRetry) nếu bộ lọc an toàn của Google chặn.
+  const contentToTranslate = _isEuphemismRetry ? EuphemismFilter.mask(text, sourceLang) : text;
 
   const normThinking = (thinkingLevel || 'medium').toLowerCase().trim();
   const isInteractions = baseUrl.includes('/interactions');
