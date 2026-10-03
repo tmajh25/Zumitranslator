@@ -13,12 +13,15 @@ try {
 const fileService = require('./services/file/fileService');
 const { translatorRegistry } = require('./services/translators');
 const bookStorage = require('./services/file/bookStorage');
+const configStorage = require('./services/file/configStorage');
 
-// Khởi tạo hệ thống lưu trữ sách phân tách theo file
+// Khởi tạo hệ thống lưu trữ sách phân tách theo file và cấu hình độc lập
 try {
-  bookStorage.init(app.getPath('userData'));
+  const userDataDir = app.getPath('userData');
+  bookStorage.init(userDataDir);
+  configStorage.init(userDataDir);
 } catch (err) {
-  console.error('[Main] Lỗi khởi tạo bookStorage:', err);
+  console.error('[Main] Lỗi khởi tạo storage:', err);
 }
 
 let mainWindow;
@@ -192,6 +195,10 @@ ipcMain.handle('save-single-book-to-disk', async (event, book) => {
   return await bookStorage.saveSingleBook(book);
 });
 
+ipcMain.handle('delete-book-from-disk', async (event, idOrPath) => {
+  return await bookStorage.deleteBook(idOrPath);
+});
+
 ipcMain.handle('load-books-from-disk', async () => {
   try {
     const books = await bookStorage.loadAllBooks();
@@ -199,6 +206,21 @@ ipcMain.handle('load-books-from-disk', async () => {
   } catch (err) {
     console.error('[Main] Lỗi đọc sách từ đĩa:', err);
     return { success: false, error: err.message, books: null };
+  }
+});
+
+// ============ PERSISTENT CONFIG STORAGE ============
+ipcMain.handle('save-config-to-disk', async (event, config) => {
+  return await configStorage.saveConfig(config);
+});
+
+ipcMain.handle('load-config-from-disk', async () => {
+  try {
+    const config = await configStorage.loadConfig();
+    return { success: true, config };
+  } catch (err) {
+    console.error('[Main] Lỗi đọc config từ đĩa:', err);
+    return { success: false, error: err.message, config: null };
   }
 });
 

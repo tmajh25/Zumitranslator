@@ -18,6 +18,7 @@ const State = {
     this.books = this.loadBooks();
     this.settings = this.loadSettings();
     this.loadBooksFromDiskAsync();
+    this.loadConfigFromDiskAsync();
 
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', () => {
@@ -57,6 +58,27 @@ const State = {
         }
       } catch (err) {
         console.warn('Lỗi đọc sách từ đĩa:', err);
+      }
+    }
+  },
+
+  async loadConfigFromDiskAsync() {
+    if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.loadConfigFromDisk === 'function') {
+      try {
+        const res = await window.electronAPI.loadConfigFromDisk();
+        if (res && res.success && res.config && typeof res.config === 'object') {
+          this.settings = Object.assign({}, this.settings, res.config);
+          try {
+            localStorage.setItem('zumi_settings', JSON.stringify(this.settings));
+          } catch (_) {}
+          this.notifySettingsSaved();
+        } else if (this.settings && Object.keys(this.settings).length > 0) {
+          window.electronAPI.saveConfigToDisk(this.settings).catch(err => {
+            console.warn('Lỗi tự động sao lưu config.json lần đầu:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('Lỗi đọc config từ đĩa:', err);
       }
     }
   },
@@ -116,7 +138,12 @@ const State = {
   },
 
   deleteBook(path) {
-    this.books = this.books.filter(b => b.filePath !== path);
+    this.books = this.books.filter(b => b.filePath !== path && b.id !== path);
+    if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.deleteBookFromDisk === 'function') {
+      window.electronAPI.deleteBookFromDisk(path).catch(err => {
+        console.error('Lỗi khi xóa sách khỏi đĩa:', err);
+      });
+    }
     this.saveBooks();
   },
 
@@ -477,6 +504,11 @@ const State = {
     this.settings.providerConfigs[p] = config;
     try {
       localStorage.setItem('zumi_settings', JSON.stringify(this.settings));
+      if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.saveConfigToDisk === 'function') {
+        window.electronAPI.saveConfigToDisk(this.settings).catch(err => {
+          console.warn('Lỗi lưu config.json ra đĩa:', err);
+        });
+      }
       this.notifySettingsSaved();
     } catch (err) {
       console.error('Error saving settings to localStorage:', err);
@@ -512,6 +544,7 @@ const State = {
     this.currentBook.finishedChapters = this.finishedChapters;
     this.currentBook.lastAccessed = Date.now();
     
+    this.saveCurrentBook();
     this.saveBooks();
   },
 

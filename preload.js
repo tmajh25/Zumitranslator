@@ -26,7 +26,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   saveBooksToDisk: (books) => ipcRenderer.invoke('save-books-to-disk', books),
   saveSingleBookToDisk: (book) => ipcRenderer.invoke('save-single-book-to-disk', book),
+  deleteBookFromDisk: (idOrPath) => ipcRenderer.invoke('delete-book-from-disk', idOrPath),
   loadBooksFromDisk: () => ipcRenderer.invoke('load-books-from-disk'),
+  saveConfigToDisk: (config) => ipcRenderer.invoke('save-config-to-disk', config),
+  loadConfigFromDisk: () => ipcRenderer.invoke('load-config-from-disk'),
   cancelTranslation: () => ipcRenderer.send('cancel-translation'),
   optimizeEpub: (filePath, options) => ipcRenderer.invoke('optimize-epub', filePath, options)
 });

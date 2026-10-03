@@ -277,6 +277,7 @@ class BookStorage {
   async deleteBook(idOrPath) {
     if (!idOrPath) return { success: false };
     try {
+      let deletedId = null;
       const currentFiles = await fs.promises.readdir(this.booksDir);
       for (const file of currentFiles) {
         if (file.endsWith('.json')) {
@@ -285,10 +286,25 @@ class BookStorage {
           const b = JSON.parse(raw);
           if (b.id === idOrPath || b.filePath === idOrPath) {
             await fs.promises.unlink(filePath);
+            deletedId = b.id || file.replace('.json', '');
             console.log(`[BookStorage] Đã xóa file sách: ${file}`);
           }
         }
       }
+
+      if (deletedId && fs.existsSync(this.indexFilePath)) {
+        try {
+          const rawIndex = await fs.promises.readFile(this.indexFilePath, 'utf8');
+          let index = JSON.parse(rawIndex);
+          if (Array.isArray(index)) {
+            index = index.filter(e => e.id !== deletedId && e.filePath !== idOrPath);
+            const indexTemp = `${this.indexFilePath}.tmp_${Date.now()}`;
+            await fs.promises.writeFile(indexTemp, JSON.stringify(index, null, 2), 'utf8');
+            await fs.promises.rename(indexTemp, this.indexFilePath);
+          }
+        } catch (_) {}
+      }
+
       return { success: true };
     } catch (err) {
       console.error('[BookStorage] Lỗi xóa sách:', err);
