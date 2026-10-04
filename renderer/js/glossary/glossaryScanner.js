@@ -71,6 +71,14 @@ const GlossaryScanner = {
       return;
     }
 
+    // Tinh giản thông minh cho Scanner: Lọc bỏ các đoạn miêu tả cấm kỵ/giải phẫu sắc dục để AI không bao giờ bị chặn PROHIBITED_CONTENT
+    let safeCombinedText = (window.CharacterScanner && typeof window.CharacterScanner.buildSafeScannerText === 'function')
+      ? window.CharacterScanner.buildSafeScannerText(targetChapters, 3500)
+      : '';
+    if (!safeCombinedText || safeCombinedText.length < 50) {
+      safeCombinedText = combinedText.slice(0, 3500);
+    }
+
     // Determine language of the novel
     let bookLang = (book && book.language && book.language !== 'vi') ? book.language : (s.sourceLang || 'auto');
     if (window.ProgressDetector && typeof window.ProgressDetector.detectLanguageOffline === 'function') {
@@ -161,47 +169,103 @@ V. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT MÃ JSON HỢP LỆ):
   ]
 }`;
 
-    try {
-      const response = await window.electronAPI.translateText({
-        text: combinedText,
-        sourceLang: s.sourceLang || 'auto',
-        targetLang: s.targetLang || 'vi',
-        customPrompt: prompt,
-        apiProvider: profiler.provider,
-        apiKey: profiler.apiKey,
-        apiEndpoint: profiler.customEndpoint,
+    const scanChain = (typeof State !== 'undefined' && State.getProfilerFallbackChain)
+      ? State.getProfilerFallbackChain()
+      : [];
+
+    const primaryKey = (typeof CharacterScanner !== 'undefined' && CharacterScanner.extractCleanKey)
+      ? CharacterScanner.extractCleanKey(State.getProviderConfig(profiler.provider), profiler.apiKey)
+      : profiler.apiKey;
+
+    const scanCandidates = [
+      {
+        provider: profiler.provider,
         model: profiler.model,
-        temperature: 0.2,
-        thinkingLevel: s.thinkingLevel || 'medium',
-        reasoningEffort: s.reasoningEffort || 'medium'
-      });
-
-      if (!response) {
-        throw new Error('AI không phản hồi kết quả trích xuất.');
+        apiKey: primaryKey,
+        customEndpoint: profiler.customEndpoint
       }
+    ];
 
-      let jsonStr = response.trim();
-      if (jsonStr.includes('```json')) {
-        jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
-      } else if (jsonStr.includes('```')) {
-        jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+    for (const step of scanChain) {
+      if (!step || !step.provider || step.provider === 'google-free') continue;
+      const cfg = State.getProviderConfig(step.provider);
+      const key = (typeof CharacterScanner !== 'undefined' && CharacterScanner.extractCleanKey)
+        ? CharacterScanner.extractCleanKey(cfg, (step.provider === profiler.provider ? primaryKey : ''))
+        : (cfg.apiKey || '');
+      if (key && !(step.provider === profiler.provider && step.model === profiler.model)) {
+        scanCandidates.push({
+          provider: step.provider,
+          model: step.model,
+          apiKey: key,
+          customEndpoint: cfg.customEndpoint || ''
+        });
       }
+    }
 
-      let parsed;
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch (e) {
-        const start = jsonStr.indexOf('{');
-        const end = jsonStr.lastIndexOf('}');
-        if (start !== -1 && end !== -1 && end > start) {
-          parsed = JSON.parse(jsonStr.substring(start, end + 1));
-        } else {
-          throw new Error('Định dạng phản hồi từ AI không phải JSON hợp lệ.');
+    try {
+      let parsed = null;
+      let lastErr = null;
+
+      for (let scIdx = 0; scIdx < scanCandidates.length; scIdx++) {
+        const candidate = scanCandidates[scIdx];
+        if (scIdx > 0) {
+          const provObj = (typeof AIConfig !== 'undefined') ? AIConfig.getProvider(candidate.provider) : {};
+          const pName = provObj.name || candidate.provider.toUpperCase();
+          Utils.showToast(`Đổi AI dò thuật ngữ sang "${pName}" (${candidate.model})...`, 'info');
+        }
+
+        try {
+          const rawResp = await window.electronAPI.translateText({
+            text: safeCombinedText,
+            sourceLang: s.sourceLang || 'auto',
+            targetLang: s.targetLang || 'vi',
+            customPrompt: prompt,
+            apiProvider: candidate.provider,
+            apiKey: candidate.apiKey,
+            apiEndpoint: candidate.customEndpoint || '',
+            model: candidate.model,
+            temperature: 0.2,
+            thinkingLevel: s.thinkingLevel || 'low',
+            reasoningEffort: s.reasoningEffort || 'low',
+            safetySetting: 'BLOCK_NONE'
+          });
+
+          if (rawResp && rawResp.trim().length > 10) {
+            let jsonStr = rawResp.trim();
+            if (jsonStr.includes('```json')) {
+              jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+            } else if (jsonStr.includes('```')) {
+              jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+            }
+
+            let tempParsed = null;
+            try {
+              tempParsed = JSON.parse(jsonStr);
+            } catch (e) {
+              const start = jsonStr.indexOf('{');
+              const end = jsonStr.lastIndexOf('}');
+              if (start !== -1 && end !== -1 && end > start) {
+                try {
+                  tempParsed = JSON.parse(jsonStr.substring(start, end + 1));
+                } catch (e2) {}
+              }
+            }
+
+            if (tempParsed && Array.isArray(tempParsed.glossary) && tempParsed.glossary.length > 0) {
+              parsed = tempParsed;
+              break;
+            } else if (tempParsed && Array.isArray(tempParsed.glossary)) {
+              console.warn(`[Glossary] Model ${candidate.model} trả về 0 thuật ngữ. Đang thử tiếp...`);
+            }
+          }
+        } catch (callErr) {
+          console.warn(`[Glossary] Candidate failed: ${candidate.provider} (${candidate.model})`, callErr);
+          lastErr = callErr;
         }
       }
 
       if (!parsed || !Array.isArray(parsed.glossary)) {
-        throw new Error('Không trích xuất được danh sách thuật ngữ hợp lệ.');
+        throw new Error(lastErr ? `Lỗi dò thuật ngữ: ${lastErr.message}` : 'Không trích xuất được danh sách thuật ngữ hợp lệ.');
       }
 
       if (!Array.isArray(book.glossary)) book.glossary = [];

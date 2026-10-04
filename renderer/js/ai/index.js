@@ -120,8 +120,14 @@
         limitChars = Math.floor((safeTokenBudget / 1.5) * 5);
       }
 
-      // Bound between 1500 and 150,000 characters
-      limitChars = Math.max(1500, Math.min(150000, limitChars));
+      // Giới hạn trần an toàn thực tế (Practical Ceiling) cho dịch văn học:
+      // Dù model có maxOutputTokens lý thuyết lên tới 65K-128K, việc gửi hơn 4.500 ký tự CJK
+      // trong 1 lượt dịch sẽ khiến AI tự động tóm tắt, bỏ sót câu hoặc đứt đoạn sau ~1000 từ.
+      // Do đó, giới hạn trần tối ưu là:
+      // - CJK (Trung/Nhật/Hàn): Tối đa 4.500 ký tự (~2.000 từ)
+      // - Western (Anh/Pháp...): Tối đa 7.500 ký tự (~1.500 từ)
+      const practicalMaxChars = isCJK ? 4500 : 7500;
+      limitChars = Math.max(1500, Math.min(practicalMaxChars, limitChars));
 
       return {
         maxOutputTokens: maxTokens,

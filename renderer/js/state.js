@@ -49,8 +49,12 @@ const State = {
             const found = this.books.find(b => b.filePath === this.currentBook.filePath);
             if (found) this.currentBook = found;
           }
-          if (typeof Bookshelf !== 'undefined' && typeof Bookshelf.renderBookshelf === 'function') {
-            Bookshelf.renderBookshelf();
+          if (typeof Bookshelf !== 'undefined') {
+            if (typeof Bookshelf.render === 'function') {
+              Bookshelf.render();
+            } else if (typeof Bookshelf.renderBookshelf === 'function') {
+              Bookshelf.renderBookshelf();
+            }
           }
         } else if (this.books && this.books.length > 0) {
           // Tự động sao lưu dữ liệu từ localStorage sang đĩa ở lần chạy đầu tiên
@@ -102,17 +106,21 @@ const State = {
       // 2. Dự phòng trong localStorage: CHỈ lưu danh sách metadata sách gọn nhẹ
       // Tuyệt đối không serialize toàn bộ text hàng chục MB vào localStorage gây giật lag giao diện
       try {
-        const metadataOnly = (this.books || []).map(b => ({
-          id: b.id,
-          title: b.title,
-          author: b.author,
-          filePath: b.filePath,
-          coverImage: b.coverImage,
-          progressPercent: b.progressPercent,
-          processedChunks: b.processedChunks,
-          totalChunks: b.totalChunks,
-          lastAccessed: b.lastAccessed
-        }));
+        const metadataOnly = (this.books || []).map(b => {
+          const coverStr = b.cover || b.coverImage || '';
+          return {
+            id: b.id,
+            title: b.title,
+            author: b.author,
+            filePath: b.filePath,
+            cover: coverStr.length < 300000 ? coverStr : '',
+            coverImage: coverStr.length < 300000 ? coverStr : '',
+            progressPercent: b.progressPercent,
+            processedChunks: b.processedChunks,
+            totalChunks: b.totalChunks,
+            lastAccessed: b.lastAccessed
+          };
+        });
         localStorage.setItem('zumi_books', JSON.stringify(metadataOnly));
       } catch (e) {
         // Dữ liệu sách đã được lưu an toàn 100% trên đĩa

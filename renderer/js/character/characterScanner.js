@@ -157,6 +157,84 @@ const CharacterScanner = {
     }
   },
 
+  buildSafeScannerText(targetChapters, budget = 3500) {
+    if (!Array.isArray(targetChapters) || targetChapters.length === 0) return '';
+
+    const toxicRegex = /(?:假阳具|假玩具|玩具|小穴|后穴|花穴|肉穴|粉穴|蜜穴|肉棒|鸡巴|肛塞|胖次|罩罩|爱液|阴蒂|潮吹|内射|高潮|抽插|呻吟|赤裸|乳房|做爱|自慰|初夜|性玩具|性爱|透[！!]|被.*透|禁地|神圣的禁地|血迹|落红|破处|侵犯|强奸|强暴|压在身下|毫无反抗之力|娇嫩的花|摧残|凋零|萝莉.*赤裸|赤裸.*萝莉|敏感度|玩不坏|玩坏|怀孕|药丸|下药|迷药|无色无味|崩溃|绝望|不要|呜呜|逃走|崩坏|只能是我的|抢走你|チンポ|まんこ|질내사정)/i;
+
+    const roleKeywords = /(?:妹妹|哥哥|姐姐|弟弟|父亲|母亲|爸爸|妈妈|师兄|师姐|师弟|师妹|师尊|师父|弟子|宗主|长老|同学|老师|朋友|女友|男友|主角|少爷|小姐|陛下|殿下|队长|将军|大人|先生|女士|男|女)/;
+
+    const cleanExcerpts = [];
+    let currentLen = 0;
+
+    for (let cIdx = 0; cIdx < targetChapters.length; cIdx++) {
+      const ch = targetChapters[cIdx];
+      const rawTitle = ch.title || `Chương ${cIdx + 1}`;
+      const safeTitle = rawTitle.replace(/(?:假阳具|假玩具|做爱|自慰|肉棒|鸡巴|小穴|透[！!]|被.*透|侵犯|强奸|强暴|性爱)/gi, '').trim() || `Chương ${cIdx + 1}`;
+      
+      const paragraphs = (ch.content || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      if (paragraphs.length === 0) continue;
+
+      let startIdx = 0;
+      let teaserCount = 0;
+      for (let i = 0; i < Math.min(15, paragraphs.length); i++) {
+        if (toxicRegex.test(paragraphs[i])) teaserCount++;
+      }
+      if (teaserCount >= 2 && paragraphs.length > 20) {
+        startIdx = Math.min(12, Math.floor(paragraphs.length / 4));
+      }
+
+      const chapterExcerpts = [];
+      for (let i = startIdx; i < paragraphs.length; i++) {
+        const p = paragraphs[i];
+        if (toxicRegex.test(p)) {
+          const dMatches = p.match(/["“「『]([^"”」』]+)["”」』]/g);
+          if (dMatches) {
+            for (const d of dMatches) {
+              if (!toxicRegex.test(d) && !/^(?:["“「『])?\s*(?:嗯|啊|呀|呜|哈|咿|不要|痛)+[！!~…\s]*(?:["”」』])?$/i.test(d)) {
+                if (currentLen + d.length <= budget) {
+                  chapterExcerpts.push(d);
+                  currentLen += d.length + 1;
+                }
+              }
+            }
+          }
+          continue;
+        }
+
+        if (p.includes('“') || p.includes('"') || p.includes('「') || roleKeywords.test(p)) {
+          if (currentLen + p.length <= budget) {
+            chapterExcerpts.push(p);
+            currentLen += p.length + 2;
+          }
+        }
+
+        if (currentLen >= budget) break;
+      }
+
+      if (chapterExcerpts.length === 0) {
+        for (let i = startIdx; i < paragraphs.length; i++) {
+          const p = paragraphs[i];
+          if (!toxicRegex.test(p)) {
+            if (currentLen + p.length <= budget) {
+              chapterExcerpts.push(p);
+              currentLen += p.length + 2;
+            }
+          }
+          if (currentLen >= budget) break;
+        }
+      }
+
+      if (chapterExcerpts.length > 0) {
+        cleanExcerpts.push(`=== CHƯƠNG: ${safeTitle} ===\n${chapterExcerpts.join('\n\n')}`);
+      }
+
+      if (currentLen >= budget) break;
+    }
+
+    return cleanExcerpts.join('\n\n');
+  },
+
   cleanGlossaryValue(val, key = '') {
     if (window.BookGlossary && typeof window.BookGlossary.cleanGlossaryValue === 'function') {
       return window.BookGlossary.cleanGlossaryValue(val, key);
@@ -289,6 +367,12 @@ const CharacterScanner = {
       if (!combinedText.trim()) {
         if (!silent) Utils.showToast('Nội dung các chương trống, không thể phân tích.', 'warning');
         return null;
+      }
+
+      // Tinh giản thông minh cho Scanner: Lọc bỏ các đoạn miêu tả cấm kỵ/giải phẫu sắc dục để AI không bao giờ bị chặn PROHIBITED_CONTENT
+      let safeCombinedText = this.buildSafeScannerText(targetChapters, 3500);
+      if (!safeCombinedText || safeCombinedText.length < 50) {
+        safeCombinedText = combinedText.slice(0, 3500);
       }
 
       this.isScanning = true;
@@ -446,7 +530,7 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
         }
       }
 
-      let response = null;
+      let parsed = null;
       let lastErr = null;
 
       for (let scIdx = 0; scIdx < scanCandidates.length; scIdx++) {
@@ -462,8 +546,8 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
             throw new Error('Chức năng gọi AI (window.electronAPI.translateText) chưa sẵn sàng.');
           }
 
-          response = await window.electronAPI.translateText({
-            text: combinedText,
+          const rawResp = await window.electronAPI.translateText({
+            text: safeCombinedText,
             sourceLang: bookLang || 'auto',
             targetLang: targetLangCode || 'vi',
             customPrompt: extractionPrompt,
@@ -477,8 +561,40 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
             safetySetting: 'BLOCK_NONE'
           });
 
-          if (response && response.trim().length > 10) {
-            break;
+          if (rawResp && rawResp.trim().length > 10) {
+            let jsonStr = rawResp.trim();
+            if (jsonStr.includes('```json')) {
+              jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+            } else if (jsonStr.includes('```')) {
+              jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+            }
+
+            let tempParsed = null;
+            try {
+              tempParsed = JSON.parse(jsonStr);
+            } catch (e) {
+              const start = jsonStr.indexOf('{');
+              const end = jsonStr.lastIndexOf('}');
+              if (start !== -1 && end !== -1 && end > start) {
+                try {
+                  tempParsed = JSON.parse(jsonStr.substring(start, end + 1));
+                } catch (e2) {
+                  const sanitized = jsonStr.substring(start, end + 1).replace(/,\s*([}\]])/g, '$1');
+                  try {
+                    tempParsed = JSON.parse(sanitized);
+                  } catch (e3) {
+                    console.warn('[Profiler] Lỗi parse JSON từ phản hồi AI:', e, jsonStr);
+                  }
+                }
+              }
+            }
+
+            if (tempParsed && Array.isArray(tempParsed.characters) && tempParsed.characters.length > 0) {
+              parsed = tempParsed;
+              break;
+            } else if (tempParsed && Array.isArray(tempParsed.characters)) {
+              console.warn(`[Profiler] Model ${candidate.model} trả về 0 nhân vật. Đang thử tiếp...`);
+            }
           }
         } catch (callErr) {
           console.warn(`[Profiler] Candidate failed: ${candidate.provider} (${candidate.model})`, callErr);
@@ -486,39 +602,8 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
         }
       }
 
-      if (!response || !response.trim()) {
-        throw new Error(lastErr ? `Tất cả các AI quét đều lỗi: ${lastErr.message}` : 'Không nhận được dữ liệu từ AI.');
-      }
-
-      let jsonStr = response.trim();
-      if (jsonStr.includes('```json')) {
-        jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
-      } else if (jsonStr.includes('```')) {
-        jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
-      }
-
-      let parsed = null;
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch (e) {
-        const start = jsonStr.indexOf('{');
-        const end = jsonStr.lastIndexOf('}');
-        if (start !== -1 && end !== -1 && end > start) {
-          try {
-            parsed = JSON.parse(jsonStr.substring(start, end + 1));
-          } catch (e2) {
-            const sanitized = jsonStr.substring(start, end + 1).replace(/,\s*([}\]])/g, '$1');
-            try {
-              parsed = JSON.parse(sanitized);
-            } catch (e3) {
-              console.warn('[Profiler] Lỗi parse JSON từ phản hồi AI:', e, jsonStr);
-            }
-          }
-        }
-      }
-
       if (!parsed) {
-        throw new Error('Không trích xuất được dữ liệu JSON hợp lệ từ phản hồi của AI.');
+        throw new Error(lastErr ? `Lỗi quét AI: ${lastErr.message}` : 'AI không trích xuất được danh sách nhân vật hợp lệ.');
       }
 
       if (!Array.isArray(parsed.characters)) {

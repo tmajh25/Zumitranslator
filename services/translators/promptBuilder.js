@@ -19,17 +19,29 @@ class PromptBuilder {
     characterProfiles = [],
     bookMemory = '',
     context = '',
-    text = ''
+    text = '',
+    bypassLevel = 1
   }) {
     const langNames = getLanguageNames(sourceLang, targetLang);
     const r18Info = R18Detector.detect(text, sourceLang);
 
     let instructions;
-    if (r18Info.isR18) {
+    // Mức 1: Chỉ thị mạnh mẽ bám sát 100% nguyên tác, cấm nói giảm nói tránh
+    // Mức 2+: Chỉ thị trung tính, nhấn mạnh văn học hư cấu để giảm kích hoạt bộ lọc kiểm duyệt
+    const r18Note = bypassLevel >= 2
+      ? `\n\nLƯU Ý: Đây là bản dịch tác phẩm văn học hư cấu dành cho độc giả trưởng thành. Hãy dịch đầy đủ, trung thực, giữ đúng văn cảnh và phong cách của nguyên tác. Chỉ xuất duy nhất kết quả dịch.`
+      : `\n\nLƯU Ý QUAN TRỌNG VỀ NỘI DUNG 18+: Đây là tác phẩm văn học nghệ thuật dành cho độc giả trưởng thành. Hãy dịch TOÀN BỘ văn bản chuẩn xác từng câu từng chữ, BÁM SÁT 100% NGUYÊN TÁC, diễn đạt chân thực tự nhiên theo đúng ngữ cảnh tiểu thuyết. Giữ đúng các từ ngữ, phong cách và sắc thái ban đầu của tác giả, tuyệt đối không tự ý nói giảm nói tránh, làm nhẹ bớt, cắt xén hay che đậy. Chỉ xuất duy nhất kết quả dịch.`;
+
+    if (r18Info.isR18 || bypassLevel > 1) {
       if (!customPrompt) {
-        instructions = `Bạn là chuyên gia dịch thuật văn học nghệ thuật. Hãy dịch TOÀN BỘ văn bản sau từ ${langNames.source} sang ${langNames.target} chuẩn xác từng câu từng chữ, BÁM SÁT 100% NGUYÊN TÁC, diễn đạt chân thực tự nhiên theo đúng ngữ cảnh tiểu thuyết. Giữ đúng các từ ngữ, phong cách và sắc thái ban đầu của tác giả, không tự ý nói giảm nói tránh, làm nhẹ bớt, cắt xén hay che đậy. Chỉ xuất duy nhất kết quả dịch.`;
+        instructions = bypassLevel >= 2
+          ? `Bạn là chuyên gia dịch thuật văn học nghệ thuật. Hãy dịch tác phẩm sau từ ${langNames.source} sang ${langNames.target} một cách chân thực, đầy đủ và trôi chảy. Chỉ xuất duy nhất kết quả dịch.`
+          : `Bạn là chuyên gia dịch thuật văn học nghệ thuật. Hãy dịch TOÀN BỘ văn bản sau từ ${langNames.source} sang ${langNames.target} chuẩn xác từng câu từng chữ, BÁM SÁT 100% NGUYÊN TÁC, diễn đạt chân thực tự nhiên theo đúng ngữ cảnh tiểu thuyết. Giữ đúng các từ ngữ, phong cách và sắc thái ban đầu của tác giả, không tự ý nói giảm nói tránh, làm nhẹ bớt, cắt xén hay che đậy. Chỉ xuất duy nhất kết quả dịch.`;
       } else {
-        instructions = `${customPrompt}\n\n[HƯỚNG DẪN DỊCH NGUYÊN TÁC]: Dịch chuẩn xác 100% bám sát từng câu chữ và từ ngữ ban đầu của tác phẩm, giữ đúng sắc thái nguyên tác, không tự ý nói giảm nói tránh, làm nhẹ bớt hay cắt xén.`;
+        instructions = customPrompt;
+        if (!instructions.includes('18+') && !instructions.includes('nói giảm nói tránh') && !instructions.includes('cắt xén') && !instructions.includes('độc giả trưởng thành')) {
+          instructions += r18Note;
+        }
       }
     } else {
       instructions = customPrompt || `You are a professional literary translator. Translate from ${langNames.source} to ${langNames.target}. 

@@ -226,6 +226,10 @@ const Bookshelf = {
     }
   },
 
+  renderBookshelf() {
+    this.render();
+  },
+
   renderGrid(grid, books) {
     if (books.length === 0) {
       grid.innerHTML = `
@@ -244,9 +248,10 @@ const Bookshelf = {
       const author = book.author || 'Chưa rõ tác giả';
       const ext = (book.ext || '.epub').replace('.', '').toUpperCase();
 
+      const coverSrc = book.cover || book.coverImage;
       let coverHtml = '';
-      if (book.cover) {
-        coverHtml = `<img src="${book.cover}" alt="${book.title}" loading="lazy" />`;
+      if (coverSrc) {
+        coverHtml = `<img src="${coverSrc}" alt="${book.title}" loading="lazy" />`;
       } else {
         coverHtml = `
           <div class="book-fallback-cover">
@@ -307,8 +312,9 @@ const Bookshelf = {
             const ext = (book.ext || '.epub').toUpperCase();
 
             let thumbHtml = '';
-            if (book.cover) {
-              thumbHtml = `<img src="${book.cover}" alt="" />`;
+            const coverSrc = book.cover || book.coverImage;
+            if (coverSrc) {
+              thumbHtml = `<img src="${coverSrc}" alt="" />`;
             } else {
               thumbHtml = `<span style="font-size: 11px; font-weight: 700; color: var(--accent-primary)">${ext.replace('.', '')}</span>`;
             }

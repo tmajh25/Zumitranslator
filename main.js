@@ -2,6 +2,13 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+if (process.platform === 'win32') {
+  try {
+    process.stdout?.setDefaultEncoding?.('utf8');
+    process.stderr?.setDefaultEncoding?.('utf8');
+  } catch (_) {}
+}
+
 // Giữ nguyên đường dẫn userData tới 'zumitrans' để bảo toàn toàn bộ dữ liệu sách và cài đặt cũ
 try {
   const targetUserData = path.join(app.getPath('appData'), 'zumitrans');

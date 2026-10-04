@@ -430,7 +430,8 @@ const Settings = {
 
     // Update dynamic token information in banner
     if (typeof AIConfig !== 'undefined' && typeof AIConfig.getSafeChunkLimit === 'function') {
-      const info = AIConfig.getSafeChunkLimit(provider, model);
+      const sampleText = (State.currentBook?.chapters?.[0]?.content) || (State.chapters?.[0]?.content) || '';
+      const info = AIConfig.getSafeChunkLimit(provider, model, sampleText);
       const modelBadge = UI.$('#chunkModelBadge');
       const tokenBadge = UI.$('#chunkTokenLimitBadge');
       const autoDesc = UI.$('#chunkAutoDesc');

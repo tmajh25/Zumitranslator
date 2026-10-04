@@ -10,6 +10,34 @@ const os = require('os');
 const crypto = require('crypto');
 const JSZip = require('jszip');
 const { optimizeEpub, cleanOldTempImages } = require('./epubOptimizer');
+const R18Detector = require('../translators/r18Detector');
+
+function isBookR18(filePath, metadata, sampleText = '') {
+  const combinedMeta = [
+    filePath || '',
+    metadata?.title || '',
+    ...(metadata?.subjects || []),
+    metadata?.description || ''
+  ].join(' ');
+
+  const r18TagRegex = /(?:R[-_]?18|18\+|19\+|NSFW|Adult|Hentai|Erotica|R[-_]?19|18禁|19禁|고수위|高h|肉文)/i;
+  if (r18TagRegex.test(combinedMeta)) return true;
+
+  if (R18Detector && typeof R18Detector.isTitleR18 === 'function') {
+    if (R18Detector.isTitleR18(metadata?.title || '') || R18Detector.isTitleR18(filePath || '')) {
+      return true;
+    }
+  }
+
+  if (sampleText && R18Detector && typeof R18Detector.detect === 'function') {
+    const sample = sampleText.substring(0, 4000);
+    const lang = (metadata?.language && metadata.language !== 'vi') ? metadata.language : 'auto';
+    const det = R18Detector.detect(sample, lang);
+    if (det && det.isR18) return true;
+  }
+
+  return false;
+}
 
 function escapeXml(str) {
   if (!str) return '';
@@ -56,6 +84,77 @@ function deduplicateLeadingTitles(text, title = '') {
   return result.join('\n\n');
 }
 
+function escapeRegex(str) {
+  if (!str) return '';
+  return String(str).replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+/**
+ * Extract clean text and images from a chunk of EPUB HTML
+ */
+async function extractHtmlTextWithImages(rawHtml, itemPath, rootDir, zip, cacheDir) {
+  let contentWithImages = rawHtml;
+  const imgRegex = /<(?:img\s+[^>]*?src=["']([^"']+)["']|image\s+[^>]*?(?:xlink:href|href)=["']([^"']+)["'])[^>]*>/gi;
+  const foundImages = [...rawHtml.matchAll(imgRegex)];
+  
+  for (const match of foundImages) {
+    const rawSrc = match[1] || match[2];
+    if (!rawSrc) continue;
+    
+    const cleanSrc = decodeURIComponent(rawSrc.split('#')[0].split('?')[0]);
+    const itemDir = path.posix.dirname(itemPath);
+    const resolvedZipPath = path.posix.normalize(path.posix.join(itemDir, cleanSrc));
+    
+    let imgEntry = zip.file(resolvedZipPath) || zip.file(rootDir + cleanSrc) || zip.file(cleanSrc);
+    if (!imgEntry) {
+      const lower = resolvedZipPath.toLowerCase();
+      for (const zName in zip.files) {
+        if (zName.toLowerCase() === lower) {
+          imgEntry = zip.file(zName);
+          break;
+        }
+      }
+    }
+    
+    if (imgEntry) {
+      try {
+        const ext = path.extname(cleanSrc) || '.jpg';
+        const hashName = crypto.createHash('md5').update(resolvedZipPath).digest('hex') + ext;
+        const cachedPath = path.join(cacheDir, hashName);
+        if (!fs.existsSync(cachedPath)) {
+          const imgBuffer = await imgEntry.async('nodebuffer');
+          fs.writeFileSync(cachedPath, imgBuffer);
+        }
+        const fileUrl = 'file:///' + cachedPath.replace(/\\/g, '/');
+        contentWithImages = contentWithImages.replace(match[0], `\n\n[IMG:${fileUrl}]\n\n`);
+      } catch (imgErr) {
+        console.warn('Failed to extract image:', cleanSrc, imgErr);
+      }
+    }
+  }
+
+  let text = contentWithImages
+    .replace(/<rt[^>]*>[\s\S]*?<\/rt>/gi, '') // Remove furigana pronunciation
+    .replace(/<rp[^>]*>[\s\S]*?<\/rp>/gi, '') // Remove ruby parenthesis
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/(p|div|h[1-6]|li|tr|blockquote|section|article)>/gi, '\n\n')
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n))
+    .replace(/\r/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return text;
+}
 
 async function readEpubFile(filePath) {
   const data = fs.readFileSync(filePath);
@@ -177,7 +276,36 @@ async function readEpubFile(filePath) {
   }
 
   // 5. Parse TOC (Table of Contents) from toc.ncx or nav.xhtml
-  const tocTitleMap = {}; // href (clean or relative) -> title
+  const tocTitleMap = {}; // href (clean without anchor) -> title
+  const tocAnchorsMap = {}; // filename / base -> [ { anchor, title } ]
+
+  const addTocEntry = (rawHref, rawTitle) => {
+    if (!rawHref || !rawTitle) return;
+    const titleText = rawTitle.replace(/<[^>]+>/g, '').trim();
+    if (!titleText) return;
+
+    const [filePart, anchorPart] = rawHref.split('#');
+    const cleanFilePart = decodeURIComponent(filePart);
+    const baseFile = filePart.replace(/^.*[\\\/]/, '');
+    const cleanBaseFile = decodeURIComponent(baseFile);
+
+    if (!tocTitleMap[filePart]) tocTitleMap[filePart] = titleText;
+    if (!tocTitleMap[cleanFilePart]) tocTitleMap[cleanFilePart] = titleText;
+    if (!tocTitleMap[baseFile]) tocTitleMap[baseFile] = titleText;
+    if (!tocTitleMap[cleanBaseFile]) tocTitleMap[cleanBaseFile] = titleText;
+
+    if (anchorPart) {
+      const cleanAnchor = decodeURIComponent(anchorPart);
+      const targetKeys = [cleanBaseFile, baseFile, cleanFilePart, filePart];
+      for (const k of targetKeys) {
+        if (!tocAnchorsMap[k]) tocAnchorsMap[k] = [];
+        if (!tocAnchorsMap[k].some(a => a.anchor === cleanAnchor || a.anchor === anchorPart)) {
+          tocAnchorsMap[k].push({ anchor: cleanAnchor, title: titleText });
+        }
+      }
+    }
+  };
+
   try {
     if (navXhtmlHref) {
       const navContent = await zip.file(rootDir + decodeURIComponent(navXhtmlHref))?.async('string');
@@ -187,29 +315,17 @@ async function readEpubFile(filePath) {
         const parseContent = tocNavMatch ? tocNavMatch[1] : navContent;
         const navMatches = [...parseContent.matchAll(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
         for (const nm of navMatches) {
-          const rawHref = nm[1].split('#')[0];
-          const titleText = nm[2].replace(/<[^>]+>/g, '').trim();
-          if (rawHref && titleText) {
-            if (!tocTitleMap[rawHref]) tocTitleMap[rawHref] = titleText;
-            const base = rawHref.replace(/^.*[\\\/]/, '');
-            if (!tocTitleMap[base]) tocTitleMap[base] = titleText;
-          }
+          addTocEntry(nm[1], nm[2]);
         }
       }
     }
 
-    if (tocNcxHref && Object.keys(tocTitleMap).length === 0) {
+    if (tocNcxHref && Object.keys(tocAnchorsMap).length === 0 && Object.keys(tocTitleMap).length === 0) {
       const ncxContent = await zip.file(rootDir + decodeURIComponent(tocNcxHref))?.async('string');
       if (ncxContent) {
         const npMatches = [...ncxContent.matchAll(/<navPoint[\s\S]*?<text>([\s\S]*?)<\/text>[\s\S]*?src=["']([^"']+)["']/gi)];
         for (const npm of npMatches) {
-          const titleText = npm[1].replace(/<[^>]+>/g, '').trim();
-          const rawHref = npm[2].split('#')[0];
-          if (rawHref && titleText) {
-            if (!tocTitleMap[rawHref]) tocTitleMap[rawHref] = titleText;
-            const base = rawHref.replace(/^.*[\\\/]/, '');
-            if (!tocTitleMap[base]) tocTitleMap[base] = titleText;
-          }
+          addTocEntry(npm[2], npm[1]);
         }
       }
     }
@@ -226,7 +342,8 @@ async function readEpubFile(filePath) {
   }
 
   // 6. Read HTML/XHTML content in spine order with smart Chapter grouping & Image preservation
-  const hasToc = Object.keys(tocTitleMap).length > 0;
+  const hasToc = Object.keys(tocTitleMap).length > 0 || Object.keys(tocAnchorsMap).length > 0;
+  let isAdultBook = isBookR18(filePath, metadata);
   const chapters = [];
   let currentChapter = null;
   let chapterIndex = 0;
@@ -239,6 +356,105 @@ async function readEpubFile(filePath) {
     const itemPath = rootDir + decodeURIComponent(item.href);
     const fileContent = await (zip.file(itemPath) || zip.file(rootDir + item.href))?.async('string');
     if (!fileContent) continue;
+
+    if (!isAdultBook && fileContent) {
+      isAdultBook = isBookR18(filePath, metadata, fileContent);
+    }
+
+    const baseFile = item.href.replace(/^.*[\\\/]/, '');
+    const cleanHref = decodeURIComponent(item.href);
+    const cleanBase = decodeURIComponent(baseFile);
+    const anchors = tocAnchorsMap[cleanBase] || tocAnchorsMap[baseFile] || tocAnchorsMap[cleanHref] || tocAnchorsMap[item.href] || [];
+
+    // CHỈ áp dụng cơ chế tự động tách sub-chapters bên trong cùng 1 tệp HTML nếu cuốn sách là 18+
+    let splitPoints = [];
+    if (isAdultBook) {
+      if (anchors.length >= 2) {
+        for (const a of anchors) {
+          const regex = new RegExp(`<(?:[a-zA-Z0-9]+)[^>]*(?:id|name)=["']${escapeRegex(a.anchor)}["'][^>]*>`, 'i');
+          const match = regex.exec(fileContent);
+          if (match) {
+            splitPoints.push({ index: match.index, title: a.title, anchor: a.anchor });
+          }
+        }
+        splitPoints.sort((a, b) => a.index - b.index);
+      }
+
+      // Fallback: If no TOC anchors found, check if file contains multiple section chapters (e.g. <section epub:type="chapter">)
+      if (splitPoints.length < 2) {
+        const sectionChapterRegex = /<section\b[^>]*epub:type=["'][^"']*chapter[^"']*["'][^>]*>/gi;
+        const secMatches = [...fileContent.matchAll(sectionChapterRegex)];
+        if (secMatches.length >= 2) {
+          splitPoints = secMatches.map(m => {
+            const post = fileContent.substring(m.index, m.index + 500);
+            const hMatch = post.match(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i);
+            const title = hMatch ? hMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+            return {
+              index: m.index,
+              title: title || `Chương ${chapterIndex + 1}`
+            };
+          });
+        }
+      }
+
+      // Fallback: Check if file contains multiple heading chapters (e.g. <h2>第...章</h2>)
+      if (splitPoints.length < 2) {
+        const headingChapterRegex = /<(h[1-6])[^>]*>(\s*(?:第[0-9一二两三四五六七八九十百千万零〇]+[章回节]|Chapter\s*\d+|Chương\s*\d+)[\s\S]*?)<\/\1>/gi;
+        const headingMatches = [...fileContent.matchAll(headingChapterRegex)];
+        if (headingMatches.length >= 2) {
+          splitPoints = headingMatches.map(m => ({
+            index: m.index,
+            title: m[2].replace(/<[^>]+>/g, '').trim()
+          }));
+        }
+      }
+    }
+
+    if (splitPoints.length >= 2) {
+      // Check if there is prologue or cover text before the first split point
+      if (splitPoints[0].index > 0) {
+        const preHtml = fileContent.substring(0, splitPoints[0].index);
+        const preText = await extractHtmlTextWithImages(preHtml, itemPath, rootDir, zip, cacheDir);
+        if (preText && (preText.replace(/\[IMG:[^\]]+\]/g, '').trim().length > 30 || /\[IMG:[^\]]+\]/.test(preText))) {
+          const isCover = /cover|titlepage/i.test(item.href);
+          const preTitle = isCover ? 'Cover' : 'Mở đầu / Giới thiệu';
+          const cleanPreText = deduplicateLeadingTitles(preText, preTitle);
+          currentChapter = {
+            id: chapterIndex++,
+            title: preTitle,
+            originalTitle: preTitle,
+            content: cleanPreText,
+            charCount: cleanPreText.length,
+            wordCount: countWords(cleanPreText),
+            href: item.href,
+            selected: true,
+            shouldNumber: false
+          };
+          chapters.push(currentChapter);
+        }
+      }
+
+      for (let i = 0; i < splitPoints.length; i++) {
+        const curr = splitPoints[i];
+        const next = splitPoints[i + 1];
+        const chunkHtml = fileContent.substring(curr.index, next ? next.index : fileContent.length);
+        let cleanText = await extractHtmlTextWithImages(chunkHtml, itemPath, rootDir, zip, cacheDir);
+        cleanText = deduplicateLeadingTitles(cleanText, curr.title);
+        currentChapter = {
+          id: chapterIndex++,
+          title: curr.title,
+          originalTitle: curr.title,
+          content: cleanText,
+          charCount: cleanText.length,
+          wordCount: countWords(cleanText),
+          href: `${item.href}#${curr.anchor || ''}`,
+          selected: true,
+          shouldNumber: true
+        };
+        chapters.push(currentChapter);
+      }
+      continue;
+    }
 
     // Extract and preserve images from fileContent before stripping tags
     let contentWithImages = fileContent;
@@ -309,8 +525,7 @@ async function readEpubFile(filePath) {
     const isPureImage = hasImages && textWithoutImages.length === 0;
 
     // Detect chapter titles and headings
-    const cleanHref = item.href.replace(/^.*[\\\/]/, '');
-    let tocTitle = tocTitleMap[item.href] || tocTitleMap[cleanHref];
+    let tocTitle = tocTitleMap[item.href] || tocTitleMap[cleanHref] || tocTitleMap[baseFile] || tocTitleMap[cleanBase];
 
     let headingTitle = null;
     const h1Match = fileContent.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);

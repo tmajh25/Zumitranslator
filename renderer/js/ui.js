@@ -61,7 +61,11 @@ const UI = {
       p.classList.toggle('active', p.id === `panel-${panelId}`);
     });
     
-    if (panelId === 'appearance') {
+    if (panelId === 'file') {
+      if (window.Bookshelf && typeof Bookshelf.render === 'function') {
+        Bookshelf.render();
+      }
+    } else if (panelId === 'appearance') {
       this.$$('.settings-tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.targetPanel === 'appearance');
       });
