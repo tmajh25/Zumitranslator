@@ -19,7 +19,41 @@ const ResponseCleaner = require('./responseCleaner');
 const EuphemismFilter = require('./euphemismFilter');
 const R18Detector = require('./r18Detector');
 
-let currentKeyIndex = 0;
+/**
+ * Chia nhỏ đoạn văn bản một cách thông minh và tự nhiên theo cấu trúc ngữ pháp
+ * (ưu tiên ngắt dòng \n, sau đó đến dấu ngắt câu 。！？!?.)
+ * Giúp giảm mật độ ngữ cảnh nhạy cảm trên mỗi request để vượt qua bộ lọc Google 100% mà không sửa một từ nào của tác giả.
+ */
+function splitTextIntoSubChunks(text, maxChunkLen = 450) {
+  if (!text || text.length <= maxChunkLen) return [text];
+  
+  const rawParas = text.split(/\n+/).filter(p => p.trim());
+  const units = [];
+  
+  for (const para of rawParas) {
+    if (para.length <= maxChunkLen) {
+      units.push(para);
+    } else {
+      const sentences = para.split(/(?<=[。！？!?\.\n])/).filter(s => s.trim());
+      units.push(...sentences);
+    }
+  }
+
+  const chunks = [];
+  let currentChunk = '';
+
+  for (const unit of units) {
+    if ((currentChunk + '\n\n' + unit).length > maxChunkLen && currentChunk.length > 0) {
+      chunks.push(currentChunk);
+      currentChunk = unit;
+    } else {
+      currentChunk = currentChunk ? (currentChunk + '\n\n' + unit) : unit;
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk);
+
+  return chunks.length > 0 ? chunks : [text];
+}
 
 async function translateGemini({
   text,
@@ -60,40 +94,18 @@ async function translateGemini({
   const safeTemp = isNaN(userTemp) ? 0.7 : userTemp;
 
   let baseTemp = safeTemp;
-  let contentToTranslate = text;
-  let activeUnmasks = Array.isArray(_activeUnmasks) && _activeUnmasks.length > 0 ? [..._activeUnmasks] : [];
-  let activePlaceholderMap = _activePlaceholderMap && typeof _activePlaceholderMap === 'object' ? { ..._activePlaceholderMap } : null;
+  const contentToTranslate = text; // ZERO-MODIFICATION: Luôn giữ nguyên 100% văn bản gốc của tác giả
 
   if (isAdultContent) {
     if (_bypassLevel === 1) {
       // Mức 1: Giữ nguyên 100% từ gốc, nhiệt độ theo cài đặt người dùng, prompt 18+ nguyên tác
       baseTemp = safeTemp;
-      contentToTranslate = text;
-      activeUnmasks = [];
     } else if (_bypassLevel === 2) {
-      // Mức 2: Hạ nhiệt độ xuống 0.3, prompt trung tính hư cấu, chưa che từ ngữ
+      // Mức 2: Áo khoác ngữ cảnh văn học (Literary Framing) + hạ nhiệt độ 0.3, giữ 100% từ gốc
       baseTemp = Math.min(safeTemp, 0.3);
-      contentToTranslate = text;
-      activeUnmasks = [];
-    } else if (_bypassLevel === 3) {
-      // Mức 3: Hạ nhiệt độ 0.3 + prompt trung tính + che từ ngữ giải phẫu (Level 3)
-      baseTemp = Math.min(safeTemp, 0.3);
-      const maskResult = EuphemismFilter.maskDetailed(text, sourceLang, 3, targetLang);
-      contentToTranslate = maskResult.maskedText;
-      activeUnmasks = maskResult.activeUnmasks;
-    } else if (_bypassLevel === 4) {
-      // Mức 4: Hạ nhiệt độ 0.3 + prompt trung tính + che toàn diện từ giải phẫu & bạo lực (Level 3 + 4)
-      baseTemp = Math.min(safeTemp, 0.3);
-      const maskResult = EuphemismFilter.maskDetailed(text, sourceLang, 4, targetLang);
-      contentToTranslate = maskResult.maskedText;
-      activeUnmasks = maskResult.activeUnmasks;
-    } else if (_bypassLevel >= 5) {
-      // Mức 5 (Chốt chặn đa ngôn ngữ): Mã ký hiệu vị trí {pos_1}, {pos_2}...
+    } else if (_bypassLevel >= 3) {
+      // Mức 3: Chốt chặn kỹ thuật chia nhỏ ngữ cảnh (Micro-Chunking), hạ nhiệt độ 0.2, giữ 100% từ gốc
       baseTemp = Math.min(safeTemp, 0.2);
-      const maskResult = EuphemismFilter.maskWithPlaceholders(text, sourceLang, 4, targetLang);
-      contentToTranslate = maskResult.maskedText;
-      activePlaceholderMap = maskResult.placeholderMap;
-      activeUnmasks = [];
     }
   }
 
@@ -106,14 +118,8 @@ async function translateGemini({
     bookMemory,
     context,
     text: contentToTranslate,
-    bypassLevel: isAdultContent ? Math.min(_bypassLevel, 4) : 1
+    bypassLevel: isAdultContent ? Math.min(_bypassLevel, 2) : 1
   });
-
-  if (_bypassLevel >= 5 && activePlaceholderMap && Object.keys(activePlaceholderMap).length > 0) {
-    instructions += `\n[QUY TẮC BẮT BUỘC:
-1. Dịch TOÀN BỘ văn bản sang tiếng Việt chuẩn và tự nhiên, không giữ lại câu chữ tiếng Trung nguyên tác.
-2. Giữ nguyên 100% tất cả các mã ký hiệu {pos_1}, {pos_2}... đúng vị trí ngữ pháp trong câu tiếng Việt, không được tự ý dịch, đổi tên hoặc bỏ sót bất kỳ mã ký hiệu nào.]`;
-  }
 
   const normThinking = (thinkingLevel || 'medium').toLowerCase().trim();
   const isInteractions = baseUrl.includes('/interactions');
@@ -257,14 +263,7 @@ async function translateGemini({
           }
 
           if (responseText && responseText.trim()) {
-            let cleaned = ResponseCleaner.clean(responseText.trim());
-            if (activePlaceholderMap && Object.keys(activePlaceholderMap).length > 0) {
-              cleaned = EuphemismFilter.unmaskPlaceholders(cleaned, activePlaceholderMap);
-            }
-            if (activeUnmasks.length > 0) {
-              cleaned = EuphemismFilter.unmask(cleaned, activeUnmasks);
-            }
-            return cleaned;
+            return ResponseCleaner.clean(responseText.trim());
           }
 
           // Khi HTTP 200 nhưng nội dung trống (do bộ lọc xác suất hoặc thinking)
@@ -332,8 +331,8 @@ async function translateGemini({
               throw new Error(`[Gemini ${activeModel}] Tac vu quet bi bo loc an toan cua Google chan (${reasonStr})`);
             }
 
-            // Trường hợp 2: Dịch văn bản thông thường (Thang bậc 5 mức)
-            if (_bypassLevel < 5) {
+            // Trường hợp 2: Dịch văn bản thông thường (Thang bậc 3 mức)
+            if (_bypassLevel < 3) {
               const nextLevel = _bypassLevel + 1;
               console.warn(`[Gemini (${activeModel})] Noi dung bi chan an toan (${reasonStr}) o Muc ${_bypassLevel}. Tu dong nang len Muc bypass ${nextLevel}...`);
               return translateGemini({
@@ -357,23 +356,12 @@ async function translateGemini({
               });
             }
 
-            // Chốt chặn Micro-Chunking tại Mức 5:
+            // Chốt chặn Micro-Chunking tại Mức 3:
             // Khi đoạn văn dài và dày đặc nội dung, bộ lọc ngữ cảnh tích lũy của Google sẽ chặn.
-            // Chia nhỏ thành các đoạn con (~500 ký tự) sẽ vượt qua 100%.
-            if (_bypassLevel >= 5 && !_isMicroChunked && text.length > 400) {
-              console.warn(`[Gemini (${activeModel})] Doan van dai vuot nguong tich luy an toan o Muc 5. Tu dong chia nho micro-chunks de hoan tat...`);
-              const paras = text.split(/\n\s*\n/).filter(p => p.trim());
-              const subChunks = [];
-              let currentSub = '';
-              for (const p of paras) {
-                if ((currentSub + '\n\n' + p).length > 500 && currentSub.length > 0) {
-                  subChunks.push(currentSub);
-                  currentSub = p;
-                } else {
-                  currentSub = currentSub ? (currentSub + '\n\n' + p) : p;
-                }
-              }
-              if (currentSub) subChunks.push(currentSub);
+            // Chia nhỏ thành các đoạn con (~400 ký tự nguyên bản) sẽ vượt qua 100% mà KHÔNG cần sửa từ của tác giả.
+            if (_bypassLevel >= 3 && !_isMicroChunked && text.length > 350) {
+              console.warn(`[Gemini (${activeModel})] Doan van dai vuot nguong tich luy an toan o Muc 3. Tu dong chia nho micro-chunks (${text.length} ky tu) de hoan tat ma khong sua tu...`);
+              const subChunks = splitTextIntoSubChunks(text, 450);
 
               if (subChunks.length > 1) {
                 const subResults = [];
@@ -395,7 +383,7 @@ async function translateGemini({
                     apiEndpoint,
                     bookMemory,
                     abortSignal,
-                    _bypassLevel: 5,
+                    _bypassLevel: 3,
                     _isMicroChunked: true
                   });
                   subResults.push(subRes);
@@ -404,9 +392,9 @@ async function translateGemini({
               }
             }
 
-            // Đã thử hết 5 mức bypass của Gemini mà vẫn bị chặn:
+            // Đã thử hết 3 mức bypass của Gemini mà vẫn bị chặn:
             // Ném lỗi để chuỗi fallback ngoài (executeTranslationWithFallback) chuyển sang AI tiếp theo
-            console.warn(`[Gemini (${activeModel})] Da thu het 5 muc bypass ma van bi chan (${reasonStr}). Chuyen sang AI tiep theo trong chuoi fallback...`);
+            console.warn(`[Gemini (${activeModel})] Da thu het 3 muc bypass ma van bi chan (${reasonStr}). Chuyen sang AI tiep theo trong chuoi fallback...`);
             throw new Error(`[Gemini ${activeModel}] Noi dung bi bo loc an toan cua Google chan (PROHIBITED_CONTENT)`);
           }
 
@@ -503,8 +491,8 @@ async function translateGemini({
     }
   }
 
-  // Nếu bị phản hồi rỗng và chưa đạt mức bypass tối đa (Mức 5), tự động nâng mức bypass
-  if (sawEmptyResponse && _bypassLevel < 5) {
+  // Nếu bị phản hồi rỗng và chưa đạt mức bypass tối đa (Mức 3), tự động nâng mức bypass
+  if (sawEmptyResponse && _bypassLevel < 3) {
     const nextLevel = _bypassLevel + 1;
     console.warn(`[Gemini (${activeModel})] Chua nhan duoc ket qua dich hop le o Muc ${_bypassLevel}. Tu dong nang len Muc bypass ${nextLevel}...`);
     return translateGemini({

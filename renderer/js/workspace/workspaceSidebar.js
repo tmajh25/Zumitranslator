@@ -20,6 +20,10 @@ const WorkspaceSidebar = {
       toggleBtn.classList.toggle('active', isCollapsed);
       toggleBtn.title = isCollapsed ? 'Mở rộng danh sách chương' : 'Thu gọn danh sách chương';
     }
+    const collapseBtn = UI.$('#epubCollapseSidebarBtn');
+    if (collapseBtn) {
+      collapseBtn.title = isCollapsed ? 'Mở rộng danh sách chương' : 'Thu gọn danh sách chương';
+    }
   },
 
   updateTranslateButtonState() {

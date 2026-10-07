@@ -207,6 +207,8 @@ const Bookshelf = {
     if (elCompleted) elCompleted.textContent = completed;
   },
 
+  isDetailOpen: false,
+
   render() {
     this.init();
     this.updateStats();
@@ -216,13 +218,45 @@ const Bookshelf = {
     const books = this.getProcessedBooks();
 
     if (this.viewMode === 'list') {
-      UI.toggleHidden(grid, true);
-      UI.toggleHidden(list, false);
-      this.renderList(list, books);
+      if (list) this.renderList(list, books);
     } else {
-      UI.toggleHidden(grid, false);
-      UI.toggleHidden(list, true);
-      this.renderGrid(grid, books);
+      if (grid) this.renderGrid(grid, books);
+    }
+
+    const detailView = UI.$('#bookDetailView');
+    const mainView = UI.$('#bookshelfMainView');
+    const isShowingDetail = this.isDetailOpen || (detailView && !detailView.classList.contains('hidden'));
+
+    if (isShowingDetail) {
+      // Khi đang xem chi tiết sách: Giữ ẩn toàn bộ tủ sách
+      if (mainView) mainView.classList.add('hidden');
+      if (grid) grid.classList.add('hidden');
+      if (list) list.classList.add('hidden');
+      const header = UI.$('.bookshelf-header');
+      if (header) header.classList.add('hidden');
+      const stats = UI.$('#bookshelfStats');
+      if (stats) stats.classList.add('hidden');
+      const toolbar = UI.$('#bookshelfToolbar');
+      if (toolbar) toolbar.classList.add('hidden');
+      if (detailView) detailView.classList.remove('hidden');
+    } else {
+      // Khi đang xem tủ sách: Giữ ẩn chi tiết sách và hiển thị tủ sách
+      if (detailView) detailView.classList.add('hidden');
+      if (mainView) mainView.classList.remove('hidden');
+      const header = UI.$('.bookshelf-header');
+      if (header) header.classList.remove('hidden');
+      const stats = UI.$('#bookshelfStats');
+      if (stats) stats.classList.remove('hidden');
+      const toolbar = UI.$('#bookshelfToolbar');
+      if (toolbar) toolbar.classList.remove('hidden');
+
+      if (this.viewMode === 'list') {
+        if (grid) grid.classList.add('hidden');
+        if (list) list.classList.remove('hidden');
+      } else {
+        if (grid) grid.classList.remove('hidden');
+        if (list) list.classList.add('hidden');
+      }
     }
   },
 
@@ -361,7 +395,12 @@ const Bookshelf = {
   },
 
   showDetail() {
-    UI.$('.bookshelf-header').classList.add('hidden');
+    this.isDetailOpen = true;
+    const mainView = UI.$('#bookshelfMainView');
+    if (mainView) mainView.classList.add('hidden');
+
+    const header = UI.$('.bookshelf-header');
+    if (header) header.classList.add('hidden');
     const stats = UI.$('#bookshelfStats');
     if (stats) stats.classList.add('hidden');
     const toolbar = UI.$('#bookshelfToolbar');
@@ -371,7 +410,8 @@ const Bookshelf = {
     const list = UI.$('#bookshelfList');
     if (list) list.classList.add('hidden');
 
-    UI.$('#bookDetailView').classList.remove('hidden');
+    const detailView = UI.$('#bookDetailView');
+    if (detailView) detailView.classList.remove('hidden');
     
     if (State.currentBook) {
       if (!Array.isArray(State.currentBook.glossary)) State.currentBook.glossary = [];
@@ -386,14 +426,23 @@ const Bookshelf = {
   },
 
   showList() {
-    UI.$('.bookshelf-header').classList.remove('hidden');
+    this.isDetailOpen = false;
+    const detailView = UI.$('#bookDetailView');
+    if (detailView) detailView.classList.add('hidden');
+
+    const mainView = UI.$('#bookshelfMainView');
+    if (mainView) mainView.classList.remove('hidden');
+
+    const header = UI.$('.bookshelf-header');
+    if (header) header.classList.remove('hidden');
     const stats = UI.$('#bookshelfStats');
     if (stats) stats.classList.remove('hidden');
     const toolbar = UI.$('#bookshelfToolbar');
     if (toolbar) toolbar.classList.remove('hidden');
+
     if (window.BookGlossary) BookGlossary.close();
     if (window.CharacterProfile) CharacterProfile.close();
-    UI.$('#bookDetailView').classList.add('hidden');
+
     this.render();
   },
 

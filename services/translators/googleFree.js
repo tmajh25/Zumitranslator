@@ -5,6 +5,33 @@
  */
 
 async function translateGoogleFree({ text, sourceLang = 'auto', targetLang = 'vi', abortSignal = null }) {
+  if (!text || !text.trim()) return '';
+
+  // Tu dong chia nho neu doan van dai hon 2500 ky tu (khi fallback tu AI hoac tat chunking)
+  if (text.length > 2500) {
+    const paras = text.split(/\n\s*\n/).filter(p => p.trim());
+    const subChunks = [];
+    let currentSub = '';
+    for (const p of paras) {
+      if ((currentSub + '\n\n' + p).length > 2000 && currentSub.length > 0) {
+        subChunks.push(currentSub);
+        currentSub = p;
+      } else {
+        currentSub = currentSub ? (currentSub + '\n\n' + p) : p;
+      }
+    }
+    if (currentSub) subChunks.push(currentSub);
+
+    if (subChunks.length > 1) {
+      const results = [];
+      for (const sc of subChunks) {
+        if (abortSignal && abortSignal.aborted) throw new Error('Dịch đã bị hủy');
+        results.push(await translateGoogleFree({ text: sc, sourceLang, targetLang, abortSignal }));
+      }
+      return results.join('\n\n');
+    }
+  }
+
   const url = `https://translate.googleapis.com/translate_a/single?client=dict-chrome-ex&sl=${sourceLang}&tl=${targetLang}&dt=t`;
   
   let retryCount = 0;

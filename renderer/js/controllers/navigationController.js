@@ -12,6 +12,10 @@ const NavigationController = {
   setupPanelNavigation() {
     UI.elements.navItems.forEach(item => {
       item.addEventListener('click', () => {
+        if (item.dataset.panel === 'file' && item.classList.contains('active') && window.Bookshelf && Bookshelf.isDetailOpen) {
+          Bookshelf.showList();
+          return;
+        }
         UI.showPanel(item.dataset.panel);
       });
     });

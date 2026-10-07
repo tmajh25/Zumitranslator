@@ -457,55 +457,20 @@ class EuphemismFilter {
       return { maskedText: text, activeUnmasks: [] };
     }
 
-    const lang = (sourceLang || 'auto').toLowerCase();
-    const activeUnmasks = [];
-    let masked = text;
-
-    // 1. Dynamic Age Processor (handles all minor ages < 18 dynamically at Level 4)
-    if (maxLevel >= 4) {
-      masked = EuphemismFilter.processDynamicAges(masked, activeUnmasks, targetLang);
-    }
-
-    // 2. Generalized Language Patterns
-    const rules = [];
-    if (lang === 'ko' || /[\uAC00-\uD7AF]/.test(text)) {
-      rules.push(...EuphemismFilter.KO_MAP);
-    }
-    if (lang === 'zh' || /[\u4E00-\u9FFF]/.test(text)) {
-      rules.push(...EuphemismFilter.ZH_MAP);
-    }
-    if (lang === 'ja' || /[\u3040-\u30FF]/.test(text)) {
-      rules.push(...EuphemismFilter.JA_MAP);
-    }
-
-    // Filter rules by bypass level
-    const filteredRules = rules.filter(r => (r.level || 3) <= maxLevel);
-
-    for (const item of filteredRules) {
-      item.pattern.lastIndex = 0;
-      if (item.pattern.test(masked)) {
-        masked = masked.replace(item.pattern, item.replacement);
-        if (item.unmask && Array.isArray(item.unmask)) {
-          activeUnmasks.push(...item.unmask);
-        }
-      }
-    }
-
-    return { maskedText: masked, activeUnmasks };
+    // ZERO-MODIFICATION: Giữ nguyên 100% văn bản gốc, không thay thế bất kỳ từ ngữ nào
+    return { maskedText: text, activeUnmasks: [] };
   }
 
   /**
-   * Quick check if text contains sensitive / R18 keywords matching euphemism rules
+   * Quick check if text contains sensitive / R18 keywords to activate BLOCK_NONE and adult prompt
    */
-  static hasSensitiveContent(text, sourceLang = 'auto', maxLevel = 4) {
+  static hasSensitiveContent(text, sourceLang = 'auto') {
     if (!text || typeof text !== 'string') return false;
 
-    // Check dynamic ages at Level 4
-    if (maxLevel >= 4) {
-      const dummyUnmasks = [];
-      const afterAge = EuphemismFilter.processDynamicAges(text, dummyUnmasks);
-      if (dummyUnmasks.length > 0) return true;
-    }
+    // Check dynamic ages
+    const dummyUnmasks = [];
+    EuphemismFilter.processDynamicAges(text, dummyUnmasks);
+    if (dummyUnmasks.length > 0) return true;
 
     const lang = (sourceLang || 'auto').toLowerCase();
     const rules = [];
@@ -518,8 +483,7 @@ class EuphemismFilter {
     if (lang === 'ja' || /[\u3040-\u30FF]/.test(text)) {
       rules.push(...EuphemismFilter.JA_MAP);
     }
-    const filteredRules = rules.filter(r => (r.level || 3) <= maxLevel);
-    for (const item of filteredRules) {
+    for (const item of rules) {
       item.pattern.lastIndex = 0;
       if (item.pattern.test(text)) return true;
     }
@@ -527,90 +491,24 @@ class EuphemismFilter {
   }
 
   /**
-   * Positional Placeholder Token Masking Engine ({pos_1}, {pos_2}...)
-   * Multilingual fallback that replaces sensitive words with neutral positional slots.
-   * Completely immune to safety filters across all languages.
+   * ZERO-MODIFICATION: Giữ nguyên 100% văn bản gốc, không thay thế mã ký hiệu
    */
-  static maskWithPlaceholders(text, sourceLang = 'auto', maxLevel = 4, targetLang = 'vi') {
-    if (!text || typeof text !== 'string') {
-      return { maskedText: text, placeholderMap: {} };
-    }
-    const lang = (sourceLang || 'auto').toLowerCase();
-    const tLang = (targetLang || 'vi').toLowerCase().startsWith('en') ? 'en' : 'vi';
-    const rules = [];
-    if (lang === 'ko' || /[\uAC00-\uD7AF]/.test(text)) rules.push(...EuphemismFilter.KO_MAP);
-    if (lang === 'zh' || /[\u4E00-\u9FFF]/.test(text)) rules.push(...EuphemismFilter.ZH_MAP);
-    if (lang === 'ja' || /[\u3040-\u30FF]/.test(text)) rules.push(...EuphemismFilter.JA_MAP);
-
-    let masked = text;
-    const placeholderMap = {};
-    let counter = 1;
-
-    // 1. Mask dynamic minor ages into {pos_X}
-    masked = masked.replace(/(?<!\d)([1-9]|1[0-7])\s*(岁|歲|살|歳)/g, (match, numStr) => {
-      const tag = `{pos_${counter++}}`;
-      placeholderMap[tag] = tLang === 'en' ? `${numStr} years old` : `${numStr} tuổi`;
-      return tag;
-    });
-
-    // 2. Mask sensitive rules into {pos_X}
-    const filteredRules = rules.filter(r => (r.level || 3) <= maxLevel);
-    for (const rule of filteredRules) {
-      rule.pattern.lastIndex = 0;
-      if (rule.pattern.test(masked)) {
-        let meaning = '';
-        if (rule.meaning && rule.meaning[tLang]) {
-          meaning = rule.meaning[tLang];
-        } else if (rule.unmask && rule.unmask[0] && rule.unmask[0].replacement) {
-          meaning = rule.unmask[0].replacement;
-        }
-        if (meaning) {
-          rule.pattern.lastIndex = 0;
-          masked = masked.replace(rule.pattern, () => {
-            const tag = `{pos_${counter++}}`;
-            placeholderMap[tag] = meaning;
-            return tag;
-          });
-        }
-      }
-    }
-
-    return { maskedText: masked, placeholderMap };
+  static maskWithPlaceholders(text) {
+    return { maskedText: text, placeholderMap: {} };
   }
 
   /**
-   * Khôi phục các token {pos_1}, {pos_2}... về lại nghĩa chuẩn của targetLang
-   * Hỗ trợ bắt linh hoạt khoảng trắng do AI tự sinh: { pos_1 }, {pos_1 }
+   * Khôi phục placeholder: Pass-through nguyên văn
    */
-  static unmaskPlaceholders(translatedText, placeholderMap = {}) {
-    if (!translatedText || typeof translatedText !== 'string' || !placeholderMap) {
-      return translatedText;
-    }
-    let restored = translatedText;
-    for (const [tag, targetWord] of Object.entries(placeholderMap)) {
-      if (tag && targetWord) {
-        const cleanTag = tag.replace(/[{}]/g, '');
-        const flexRegex = new RegExp(`\\{\\s*${cleanTag}\\s*\\}`, 'gi');
-        restored = restored.replace(flexRegex, targetWord);
-      }
-    }
-    return restored;
+  static unmaskPlaceholders(translatedText) {
+    return translatedText;
   }
 
   /**
-   * Restore translated text back to original author terms
+   * Khôi phục unmask: Pass-through nguyên văn
    */
-  static unmask(translatedText, activeUnmasks = []) {
-    if (!translatedText || typeof translatedText !== 'string' || !activeUnmasks || activeUnmasks.length === 0) {
-      return translatedText;
-    }
-    let restored = translatedText;
-    for (const u of activeUnmasks) {
-      if (u && u.pattern && u.replacement !== undefined) {
-        restored = restored.replace(u.pattern, u.replacement);
-      }
-    }
-    return restored;
+  static unmask(translatedText) {
+    return translatedText;
   }
 }
 
