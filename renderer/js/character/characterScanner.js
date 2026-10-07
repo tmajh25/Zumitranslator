@@ -516,17 +516,19 @@ IV. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ):
         }
       ];
 
-      for (const step of scanChain) {
-        if (!step || !step.provider || step.provider === 'google-free') continue;
-        const cfg = State.getProviderConfig(step.provider);
-        const key = this.extractCleanKey(cfg, (step.provider === profiler.provider ? primaryKey : ''));
-        if (key && !(step.provider === profiler.provider && step.model === profiler.model)) {
-          scanCandidates.push({
-            provider: step.provider,
-            model: step.model,
-            apiKey: key,
-            customEndpoint: cfg.customEndpoint || ''
-          });
+      if (s.enableFallback !== false) {
+        for (const step of scanChain) {
+          if (!step || !step.provider || step.provider === 'google-free') continue;
+          const cfg = State.getProviderConfig(step.provider);
+          const key = this.extractCleanKey(cfg, (step.provider === profiler.provider ? primaryKey : ''));
+          if (key && !(step.provider === profiler.provider && step.model === profiler.model)) {
+            scanCandidates.push({
+              provider: step.provider,
+              model: step.model,
+              apiKey: key,
+              customEndpoint: cfg.customEndpoint || ''
+            });
+          }
         }
       }
 

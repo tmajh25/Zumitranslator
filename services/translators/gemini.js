@@ -19,6 +19,8 @@ const ResponseCleaner = require('./responseCleaner');
 const EuphemismFilter = require('./euphemismFilter');
 const R18Detector = require('./r18Detector');
 
+let currentKeyIndex = 0;
+
 /**
  * Chia nhỏ đoạn văn bản một cách thông minh và tự nhiên theo cấu trúc ngữ pháp
  * (ưu tiên ngắt dòng \n, sau đó đến dấu ngắt câu 。！？!?.)

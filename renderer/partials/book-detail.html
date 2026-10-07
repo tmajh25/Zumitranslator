@@ -254,16 +254,64 @@
               </div>
 
               <!-- Progress (inside chapter section) -->
-              <div class="progress-section hidden" id="progressSection" style="margin-bottom: 14px;">
+              <div class="progress-section hidden" id="progressSection" style="margin-bottom: 16px;">
                 <div class="progress-header">
-                  <span class="progress-label" id="progressLabel">Đang dịch...</span>
+                  <div class="progress-header-left">
+                    <span class="progress-status-badge" id="progressStatusBadge">CHUẨN BỊ</span>
+                    <span class="progress-label" id="progressLabel">Đang dịch...</span>
+                  </div>
                   <span class="progress-percent" id="progressPercent">0%</span>
                 </div>
+
+                <!-- CÁC Ô QUY TRÌNH DỊCH (WORKFLOW PIPELINE) -->
+                <div class="translation-pipeline-grid" id="translationPipeline">
+                  <!-- Bước 1: Quét hồ sơ & Thuật ngữ -->
+                  <div class="pipeline-step-card" id="pipeStepScan">
+                    <div class="pipeline-step-header">
+                      <span class="pipeline-step-num">01</span>
+                      <span class="pipeline-step-status" id="pipeStepScanStatus">Chờ</span>
+                    </div>
+                    <div class="pipeline-step-title">Quét nhân vật & Từ điển</div>
+                    <div class="pipeline-step-desc" id="pipeStepScanDesc">Nhận diện vai xưng hô & ngữ cảnh</div>
+                  </div>
+
+                  <!-- Bước 2: Dịch tiêu đề chương -->
+                  <div class="pipeline-step-card" id="pipeStepTitle">
+                    <div class="pipeline-step-header">
+                      <span class="pipeline-step-num">02</span>
+                      <span class="pipeline-step-status" id="pipeStepTitleStatus">Chờ</span>
+                    </div>
+                    <div class="pipeline-step-title">Dịch tiêu đề chương</div>
+                    <div class="pipeline-step-desc" id="pipeStepTitleDesc">Chuẩn hóa tên chương nguyên tác</div>
+                  </div>
+
+                  <!-- Bước 3: Dịch nội dung AI -->
+                  <div class="pipeline-step-card" id="pipeStepTranslate">
+                    <div class="pipeline-step-header">
+                      <span class="pipeline-step-num">03</span>
+                      <span class="pipeline-step-status" id="pipeStepTranslateStatus">Chờ</span>
+                    </div>
+                    <div class="pipeline-step-title">Dịch nội dung AI</div>
+                    <div class="pipeline-step-desc" id="pipeStepTranslateDesc">Xoay tua model & khớp xưng hô</div>
+                  </div>
+
+                  <!-- Bước 4: Ghép nối & Lưu trữ -->
+                  <div class="pipeline-step-card" id="pipeStepFinalize">
+                    <div class="pipeline-step-header">
+                      <span class="pipeline-step-num">04</span>
+                      <span class="pipeline-step-status" id="pipeStepFinalizeStatus">Chờ</span>
+                    </div>
+                    <div class="pipeline-step-title">Ghép nối & Lưu trữ</div>
+                    <div class="pipeline-step-desc" id="pipeStepFinalizeDesc">Tự động đồng bộ vào thư viện</div>
+                  </div>
+                </div>
+
                 <div class="progress-bar-container">
                   <div class="progress-bar" id="progressBar"></div>
                 </div>
                 <div class="progress-details">
                   <span id="progressChunks">0/0 chunks</span>
+                  <span class="progress-model-tag" id="progressActiveModel"></span>
                   <span id="progressTime">--:--</span>
                 </div>
               </div>

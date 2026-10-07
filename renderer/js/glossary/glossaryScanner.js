@@ -186,19 +186,21 @@ V. ĐỊNH DẠNG ĐẦU RA (CHỈ TRẢ VỀ DUY NHẤT MÃ JSON HỢP LỆ):
       }
     ];
 
-    for (const step of scanChain) {
-      if (!step || !step.provider || step.provider === 'google-free') continue;
-      const cfg = State.getProviderConfig(step.provider);
-      const key = (typeof CharacterScanner !== 'undefined' && CharacterScanner.extractCleanKey)
-        ? CharacterScanner.extractCleanKey(cfg, (step.provider === profiler.provider ? primaryKey : ''))
-        : (cfg.apiKey || '');
-      if (key && !(step.provider === profiler.provider && step.model === profiler.model)) {
-        scanCandidates.push({
-          provider: step.provider,
-          model: step.model,
-          apiKey: key,
-          customEndpoint: cfg.customEndpoint || ''
-        });
+    if (State.settings?.enableFallback !== false) {
+      for (const step of scanChain) {
+        if (!step || !step.provider || step.provider === 'google-free') continue;
+        const cfg = State.getProviderConfig(step.provider);
+        const key = (typeof CharacterScanner !== 'undefined' && CharacterScanner.extractCleanKey)
+          ? CharacterScanner.extractCleanKey(cfg, (step.provider === profiler.provider ? primaryKey : ''))
+          : (cfg.apiKey || '');
+        if (key && !(step.provider === profiler.provider && step.model === profiler.model)) {
+          scanCandidates.push({
+            provider: step.provider,
+            model: step.model,
+            apiKey: key,
+            customEndpoint: cfg.customEndpoint || ''
+          });
+        }
       }
     }
 

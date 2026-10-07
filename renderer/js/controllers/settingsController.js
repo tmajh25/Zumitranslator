@@ -16,6 +16,9 @@ const SettingsController = {
       card.addEventListener('click', () => {
         const provider = card.querySelector('input').value;
         State.switchProvider(provider);
+        if (typeof Translation !== 'undefined' && typeof Translation.resetFallbackSession === 'function') {
+          Translation.resetFallbackSession();
+        }
         Settings.updateProviderUI(provider);
         
         UI.elements.apiProviderCards.forEach(c => c.classList.remove('active'));
@@ -44,6 +47,9 @@ const SettingsController = {
     
     bindLive('#modelSelect', (e) => {
       State.saveSettings({ model: e.target.value });
+      if (typeof Translation !== 'undefined' && typeof Translation.resetFallbackSession === 'function') {
+        Translation.resetFallbackSession();
+      }
       Settings.updateReasoningUI(State.settings.apiProvider, e.target.value);
       Settings.updateChunkUI(State.settings.apiProvider, e.target.value);
       const customModelInput = UI.$('#customModelInput');
@@ -54,6 +60,9 @@ const SettingsController = {
       const val = e.target.value.trim();
       if (val) {
         State.saveSettings({ model: val });
+        if (typeof Translation !== 'undefined' && typeof Translation.resetFallbackSession === 'function') {
+          Translation.resetFallbackSession();
+        }
         Settings.updateChunkUI(State.settings.apiProvider, val);
         const modelSelect = UI.$('#modelSelect');
         if (modelSelect) {

@@ -353,6 +353,11 @@ const State = {
     const defaultModel = provObj.models ? (typeof provObj.models[0] === 'string' ? provObj.models[0] : provObj.models[0]?.id) : '';
     const currentModel = s.model || provCfg.model || defaultModel || '';
 
+    // Khi người dùng TẮT xoay tua (enableFallback === false), CHỈ TRẢ VỀ DUY NHẤT MODEL ĐƯỢC CHỌN!
+    if (s.enableFallback === false) {
+      return [{ provider: currentProv, model: currentModel }];
+    }
+
     const getDsModels = () => {
       if (typeof AIConfig !== 'undefined' && AIConfig.getModels) {
         const ms = AIConfig.getModels('deepseek');
@@ -436,6 +441,11 @@ const State = {
     const provObj = (typeof AIConfig !== 'undefined') ? AIConfig.getProvider(currentProv) : {};
     const defaultModel = provObj.models ? (typeof provObj.models[0] === 'string' ? provObj.models[0] : provObj.models[0]?.id) : '';
     let currentModel = (s.profilerModel && s.profilerModel !== 'auto') ? s.profilerModel : (provCfg.model || defaultModel || '');
+
+    // Khi người dùng TẮT xoay tua (enableFallback === false), CHỈ TRẢ VỀ DUY NHẤT MODEL ĐƯỢC CHỌN!
+    if (s.enableFallback === false) {
+      return [{ provider: currentProv, model: currentModel }];
+    }
 
     const getDsModels = () => {
       if (typeof AIConfig !== 'undefined' && AIConfig.getModels) {

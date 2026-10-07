@@ -177,12 +177,24 @@ const Translation = {
     return fallbackKey || '';
   },
 
+  resetFallbackSession() {
+    this.activeFallbackSession = null;
+  },
+
   async executeTranslationWithFallback(callParams, contextTitle = '') {
     const s = State.settings;
+    if (s.enableFallback === false) {
+      this.activeFallbackSession = null;
+      return await window.electronAPI.translateText(callParams);
+    }
+
     if (!this.activeFallbackSession) {
+      const currentProv = s.apiProvider || 'google-free';
+      const provCfg = (typeof State.getProviderConfig === 'function') ? State.getProviderConfig(currentProv) : {};
+      const initialModel = s.model || provCfg.model || callParams.model || '';
       this.activeFallbackSession = {
-        provider: s.apiProvider || 'google-free',
-        model: s.model || '',
+        provider: currentProv,
+        model: initialModel,
         triedSteps: new Set()
       };
     }
@@ -351,9 +363,12 @@ const Translation = {
     const s = State.settings;
 
     // Reset active fallback session for this new translation run
+    const currentProv = s.apiProvider || 'google-free';
+    const provCfg = (typeof State.getProviderConfig === 'function') ? State.getProviderConfig(currentProv) : {};
+    const effectiveModel = s.model || provCfg.model || '';
     this.activeFallbackSession = {
-      provider: s.apiProvider || 'google-free',
-      model: s.model || '',
+      provider: currentProv,
+      model: effectiveModel,
       triedSteps: new Set()
     };
     const selectedChapters = State.chapters.filter(ch => ch.selected);
@@ -415,6 +430,7 @@ const Translation = {
     const startTime = Date.now();
     this.updateProgress(0, progress.total, startTime);
     UI.$('#progressLabel').textContent = 'Đang chuẩn bị...';
+    if (window.TranslationPipeline) TranslationPipeline.reset();
 
     const threadCount = s.enableMultiThreading ? (s.translationThreads || 2) : 1;
     const workers = [];
@@ -531,6 +547,9 @@ const Translation = {
         UI.toggleHidden(UI.$('#saveFileBtn'), false);
         Utils.showToast('Dịch xong toàn bộ thành công 100%!', 'success');
       }
+      if (window.TranslationPipeline) {
+        TranslationPipeline.setStep('complete');
+      }
     }
     this.resetFileUI();
   },
@@ -569,7 +588,11 @@ const Translation = {
           const shortTitle = (chapterData.title || '').length > 50
             ? (chapterData.title.substring(0, 50) + '...')
             : (chapterData.title || `Chương ${chapterData.id + 1}`);
-          labelEl.textContent = `🔍 Đang quét nhân vật & từ điển: ${shortTitle}...`;
+          labelEl.textContent = `Đang quét nhân vật & từ điển: ${shortTitle}...`;
+        }
+
+        if (window.TranslationPipeline) {
+          TranslationPipeline.setStep('scan', (chapterData.title || '').substring(0, 35));
         }
 
         await CharacterProfile.aiScanAndFill([sourceChapter], { silent: true });
@@ -584,6 +607,9 @@ const Translation = {
 
     // Translate chapter title first if enabled
     if (s.translateChapterTitles !== false) {
+      if (window.TranslationPipeline) {
+        TranslationPipeline.setStep('title', (chapterData.title || '').substring(0, 35));
+      }
       // Nếu tiêu đề chỉ có số (ví dụ: "123"), không cần gọi API dịch
       if (/^\s*\d+\s*$/.test(chapterData.title)) {
         currentDisplayTitle = chapterData.title.trim();
@@ -603,6 +629,12 @@ const Translation = {
       if (State.cancelRequested) break;
       
       const chunkText = chapterData.chunks[i];
+
+      const provCfg = (typeof State !== 'undefined' && State.getProviderConfig) ? State.getProviderConfig(s.apiProvider) : {};
+      const activeModelName = s.model || provCfg?.model || s.apiProvider || 'AI';
+      if (window.TranslationPipeline) {
+        TranslationPipeline.setStep('translate', `Đoạn ${i + 1}/${chapterData.chunks.length}`, activeModelName);
+      }
 
       const labelEl = UI.$('#progressLabel');
       if (labelEl) {
@@ -746,6 +778,9 @@ const Translation = {
         Bookshelf.renderChapterList();
       }
       if (window.TranslationWorkflow) TranslationWorkflow.update();
+      if (window.TranslationPipeline) {
+        TranslationPipeline.setStep('finalize', 'Đã lưu chương');
+      }
     }
   },
 
